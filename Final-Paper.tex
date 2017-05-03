@@ -1,0 +1,257 @@
+\documentclass{article}
+
+% if you need to pass options to natbib, use, e.g.:
+% \PassOptionsToPackage{numbers, compress}{natbib}
+% before loading nips_2016
+%
+% to avoid loading the natbib package, add option nonatbib:
+% \usepackage[nonatbib]{nips_2016}
+
+% \usepackage{nips_2016}
+
+% to compile a camera-ready version, add the [final] option, e.g.:
+\usepackage[final,nonatbib]{nips_2016}
+
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{hyperref}       % hyperlinks
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+\usepackage{color}
+\usepackage{graphicx}
+\usepackage{amssymb,amsfonts,amsmath,graphicx}    
+\usepackage[shortlabels]{enumerate}
+  
+\graphicspath{ {../figures/} }
+\input{stat-macros}
+
+\usepackage{subcaption}
+
+
+\title{Data Augmentation to Accelerate Convergence of Variational Bayes}
+
+% The \author macro works with any number of authors. There are two
+% commands used to separate the names and addresses of multiple
+% authors: \And and \AND.
+%
+% Using \And between authors leaves it to LaTeX to determine where to
+% break the lines. Using \AND forces a line break at that point. So,
+% if LaTeX puts 3 of 4 authors names on the first line, and the last
+% on the second line, try using \AND instead of \And before the third
+% author name.
+
+\author{
+  Runjing Liu and Jake Soloff \\
+  Department of Statistics, UC Berkeley\\
+  \texttt{\{runjing\_liu,jake\_soloff\}@berkeley.edu}
+  %% examples of more authors
+  %% \texttt{email} \\
+  %% \And
+  %% Coauthor \\
+  %% Affiliation \\
+  %% Address \\
+  %% \texttt{email} \\
+  %% \And
+  %% Coauthor \\
+  %% Affiliation \\
+  %% Address \\
+  %% \texttt{email} \\
+}
+
+\begin{document}
+% \nipsfinalcopy is no longer used
+
+\maketitle
+
+\vspace{-1em}
+
+\begin{abstract}
+
+\end{abstract}
+
+\section{Introduction}
+\label{introduction}
+%Voting records of legislators are commonly analyzed by political scientists to examine relationships between legislator political leanings, institutional structures, and legislative outcomes \cite{Clinton2004}. For example, even simple dimensionality reduction techniques on voting data in the US House of Representatives uncover the political characteristics of individual legislators such as party affiliation (Figure \ref{fig:DimRedux}). \par
+
+
+\subsection{Motivation} 
+
+\newpage
+
+\section{Parameter Expanded Variational Bayes}
+\label{PXVB}
+
+We describe here the Parameter Expanded Variational Bayes (PX-VB) algorithm proposed in \cite{Qi2006}. Suppose we have a data model $p(X,\theta)$, where $\theta =  \{\theta_1, ... , \theta_K\}$ are parameters, and $X$ represents the observed data. In PX-VB, the data model is augmented with an auxiliary parameter $\alpha$. Denote this overparametrized model by $p_\alpha(\theta, X)$; and let $\alpha_0$ be the choice of $\alpha$ where the original model is recovered. PX-VB adds two additional steps to the standard CAVI algorithm. At every iteration, we run one step of CAVI, which outputs an approximate variational distribution. PX-VB then chooses an $\alpha$ with which we will expand the data model. The original objective is then recovered through reparametrization of the variational distribution. In other words, any changes incurred by adjusting the data model from $\alpha_0$ to $\alpha$ is absorbed into the variational distribution $q(\theta)$. 
+
+
+
+More precisely, at the $t$-th iteration, PX-VB does the following: 
+\begin{enumerate}[(i)]
+\item {\bf Coordinate ascent:} Sequentially update $q^{(t)}(\theta_i)$, for $i=1,..., K$ to minimize $D\big( \prod_{i=1}^K q(\theta_i) \| p_{\alpha_0}(\theta, X) \big)$. 
+\item {\bf Expand:} Choose $\alpha$ to minimize $D\big( \prod_{i=1}^K q^{(t)}(\theta_i) \| p_\alpha(\theta, X) \big)$.
+\item {\bf Reduce:} Choose a reparametrization $\theta \mapsto \hat\theta$ such that
+\begin{align*}
+D\Big( \prod_{i=1}^K q^{(t)}(\hat\theta_i) \,\big\|\, p_{0}(\hat\theta, X) \Big) = D\Big( \prod_{i=1}^K q^{(t)}(\theta_i) \,\big\|\, p_\alpha(\theta, X) \Big)
+\end{align*}
+Set $q^{(t+1)}(\theta) = q^{(t)}(\hat\theta)$, and repeat. 
+\end{enumerate}
+
+
+Note that with these two added steps to CAVI, PX-VB remains a descent algorithm. In step 2, our choice of $\alpha$ ensures that the KL decreases, and in step three, we reparametrize $q^{(t)}(x)$ to maintain this KL. Therefore, one iteration of PX-VB should do no worse than one step of CAVI on its own. 
+
+The added steps of PX-VB increase the computational cost compared to CAVI, but with a proper choice of augmentation,  PX-VB often converges in fewer iterations, as we explore in the sequel. We see two explanations for such behavior. Firstly, the reparametrization allows for exploration of the parameter space in directions other than the coordinate axes. In the extreme case of the normal hierarchical model, PX-VB points the trajectory of the updates directly to the correct posterior means. Secondly, running CAVI to find an optimal mean field approximation suffers from slow convergence when the variables in the factorized distribution are strongly correlated. A good reparametrization in PX-VB helps decouple the these variables to achieve faster convergence. 
+
+
+
+
+\section{Example: Probit Regression}
+\label{probit}
+
+We explore the performance of PX-VB in the setting of Bayesian probit regression. Let $\{t_n\}_{n=1}^N$ be $\{-1,+1\}$--valued random variables. The design matrix $X\in\mathbb R^{N\times D}$ is fixed, and we place a normal prior on the parameter vector $w\in\mathbb R^D$. The generative model is
+\begin{align*}
+w &\sim \mathcal N (0, v_0^2) \\
+t_n &\sim \text{Bern}(\Phi(w^\mathsf T x_n))\quad \text{n = 1, ..., N}
+\end{align*}
+where $\Phi$ is the standard normal c.d.f. and we place a normal prior on the weights $w\in\mathbb R^D$. 
+
+
+
+
+
+
+
+\subsection{Simulated Data}
+
+%To ensure that CAVI produces reasonable posterior inferences, we sampled vote interactions and caucus co-membership counts from the generative model and compared the true model parameters to the na\"ive mean field approximation. We generated 50 representatives, 500 documents, and two communities, using one dimensional ideal points and ran the CAVI routine for 35 iterations. To evaluate convergence we output the ELBO at each iteration. To evaluate the approximate posterior means we compared the variational ideal point mean $\hat{\tau}_u = \EE_q[x_u]$ and the posterior responsibility of the first community $\hat{r}_{u1} = \EE_q[1_{M_u = 1}]$ (See \ref{sbmvi} and \ref{ipmvi} for notation) to the true ideal point $\widetilde{x}_u$ and the true community assignment $\widetilde{M}_u$ for each representative. We score according to Mean Square Error (MSE) and Brier Score (Brier), given by:
+
+\subsubsection{Data}
+%We obtained roll call vote records for the House of Representatives of the 110\textsuperscript{th} Congress from \href{www.govtrack.us}{GovTrack.us}, an independent open government data website which publishes and stores data related to the United States Congress. Our data set contains $D=1707$ documents (those categorized as bills, amendments, and motions) and $U=448$ representatives. We only consider those roll call votes where a representative voted \texttt{yea} or \texttt{nay}; there are 703,830 such interactions. We gathered caucus membership data from \cite{Victor2013}.
+\subsubsection{Evaluation} 
+%To evaluate our model we assess predictive accuracy. We compared a $K=2$ community and $K=10$ community LC-IPM with dimension $S=2$ to (a) predicting \texttt{yea} each time, (b) $L^2$ regularized Logistic Regression, and (c) the standard Ideal Point Model with dimension $S=1$ and $S=2$. We first chose the regularization parameter for Logistic Regression using a 5 fold cross validation procedure. We performed another 5 fold cross validation procedure where we trained each model on 4 folds, tested on the 5\textsuperscript{th} validation fold, and averaged the results (Table \ref{table:results_table}). We found that LC-IPM and IPM both perform very well and similarly.
+
+\section{Example: Linear Mixed Models} 
+As in the Probit model, let $X\in \mathbb{R}^{N\times D}$ be a fixed design matrix, with rows $x_n, n = 1,..., N$. We also assume the variances $\sigma^2_\beta, \sigma^2_\mu$, and $\sigma^2_y$ are fixed and known. Let the number of groups be $N_G$, and let the mapping $g(n)\mapsto \{1, ..., N_G\}$ denote the group to which the $n$-th individual belongs. Then the linear mixed model is formulated is follows: 
+\begin{align}
+\beta &\sim \mathcal N(0, \sigma^2_\beta I_{D\times D})\\
+\mu_g &\sim \mathcal N(0, \sigma^2_\mu) \quad \text{for $g= 1, ..., N_G$} \\
+y_n | \mu_g, \beta &\sim \mathcal N (x_n^T\beta + \mu_{g(n)}, \sigma^2_y)\quad \text{for $n = 1, ..., N$}
+\end{align}
+We take a fully factorized distribution over $\beta$ and $\{\mu_g\}_{g=1}^{N_G}$. In particular, 
+\begin{align}
+q_\beta(\beta) &\sim \mathcal N (\hat \beta, \Sigma_\beta)\\
+q_{\mu_g}(\mu_g) &\sim \mathcal{N}(\hat\mu_g, \tau^2_{\mu_g}) \quad \text{for }g = 1, ..., N_G
+\end{align}
+The updates for the variational parameters $\hat\beta$, $\Sigma_\beta$, $\hat\mu_g$, and $\tau^2_{\mu_g}$ are standard exponential family computations. They are given by 
+\begin{align}
+{\tau^2_{\mu_g}} &= \Big(\frac{1}{\sigma^2_\mu} + \frac{|\{n : g(n) = g\}|}{\sigma^2_y}\Big)^{-1}\\
+{\hat\mu_g} &= \Big(\frac{1}{\sigma^2_\mu} + \frac{|\{n : g(n) = g\}|}{\sigma^2_y}\Big)^{-1}\Big(\frac{1}{\sigma^2_y}\sum_{n: g(n) = g} (y_n - x_n^T\hat\beta)\Big)
+\end{align}
+for $g = 1, ..., N_G$. and 
+\begin{align}
+\Sigma_\beta &= (\frac{1}{\sigma^2_\beta} + \frac{1}{\sigma^2_y}XX^T)^{-1}\\
+\hat\beta &= (\frac{1}{\sigma^2_\beta} + \frac{1}{\sigma^2_y}XX^T)^{-1}\Big(\frac{1}{\sigma^2_y}\sum_{n=1}^N  x_n(y_n - \hat\mu_{g(n)} )\Big)
+\end{align}
+
+
+
+
+\section{Discussion}
+We found that in our Bayesian probit regression problem, PX-VB speeds up the convergence of variational methods compared to coordinate ascent and Newton conjugate gradient, two standard algorithms in optimization. The advantage to a Newton method is that there exist "black box" implementations of such algorithms in most standard optimization packages. The only requirement is that one must be able to write down the objective function, in our case the evidence lower bound. However, in variational methods, the optimization is often conducted over a high dimensional parameter space. For example, in the linear mixed model, there is at least one variational parameter for each group, and in the probit regression, there are at least one for each data point. This results in high computational complexity at each iteration. This phenomenon is well exhibited in our results, where Newton suffers in terms of wall time, even though the number of iterations required for convergence may often be much smaller than CAVI or PX-VB. 
+
+Thus, our result suggest that there are real gains in convergence time to deriving updates for coordinate descent. While CAVI requires more iterations to converge than Newton, each iteration is very cheap to compute. 
+
+
+PX-VB introduces an intermediate step to coordinate ascent, but the computational cost of this additional step is often small---and with a good augmentation, this additional computational cost is made worthwhile by the gains in per-iteration rate of convergence as demonstrated in the Probit model.
+
+To see this more abstractly, we can view the intermediate step in PX-VB as defining a mapping $M$ that takes $(q, p_0) \stackrel{\text{(ii)}}{\mapsto} (q, p_\alpha) \stackrel{\text{(iii)}}{\mapsto} (q_\alpha, p_0)$. Moreover, let $S$ be the mapping defined by the CAVI updates, and assume that the truth $q^*$ is a fixed point of both the mappping $S$ and $M$. Then the error of each iteration of PX-VB can be seen as
+\begin{align}
+\|q^{(t+1)} - q^*\|_2 &\leq \| M(S(q^{(t)})) - q^*\|_2 \\
+&\leq \|MS\|_2 \|q^{(t)} - q^*\|_2\\
+&\leq \|M\|_2\|S\|_2 \|q^{(t)} - q^*\|_2
+\end{align}
+
+Thus, we see that while CAVI converges linearly at rate $\|S\|_2$, PX-VB converges at rate $\|M\|_2\|S\|_2$. Whenever the largest eigenvalue of $M$ is less than $1$, PX-VB will converge faster than CAVI. 
+
+{\color{red} depending on how LMM turns out, put more on LMM here. Was our $M$ bad for LMM} 
+
+
+
+
+\section{Conclusions and future directions} 
+One challenge to running PX-VB is anticipating which data-augmentation scheme will actually accelerate convergence. 
+
+It is well known that the mean field approximation performs well when the posterior distribution has low correlation. Therefore, we would like to understand the connection between the reparametrization mapping $M$ and the posterior correlation structure. ~\\~\\
+
+Ultimately, in the normal hierarchical model, data augmentation methods correspond to choosing good directions for coordinate ascent. We would like to look at more examples where PX-VB succeeds and understand whether, more generally, these directions make use of second-order structure.
+
+
+\newpage
+
+\section*{Acknowledgments}
+We would like to thank Professor Wainwright and Fanny for their dedication to teaching an excellent course! % also thank ryan %Also thanks to the stat department lounge for housing us since we got here.
+
+\section*{Attribution}
+\begin{itemize}
+\item Runjing Liu: 
+\item Jake Soloff: 
+\end{itemize}
+
+\begin{thebibliography}{10}
+
+\bibitem{Blei} Blei, D. M., Kucukelbir, A. \& McAuliffe, J. D. (2016). Variational inference: a review for statisticians. {\itshape arXiv:1601.00670}.
+
+\bibitem{Cooper} Cooper, G.F. (1990). The computational complexity of probabilistic inference using Bayesian belief networks. {\sl Artificial Intelligence.} 42(2), 393–405.
+
+\bibitem{Efron} Efron, B \& Hastie, T.J. (2016). Computer Age Statistical Inference. {\itshape Cambridge University Press}.
+
+\bibitem{Grimmer} Grimmer, J. (2011). An Introduction to Bayesian Inference via Variational Approximations. {\itshape Political Analysis}. 19(1): 32-47.
+
+\bibitem{Luo} Luo, Z. Q. \& Tseng, P. (1992). On the Convergence of the Coordinate Descent Method for Convex Differentiable Minimization. {\itshape Journal of Optimization Theory and Applications} 72(1): 7-35. 
+
+\bibitem{Qi2006} Qi, Y. \& Jaakkola, T. S. (2006). Parameter Expanded Variational Bayesian Methods. {\itshape Neural Information Processing Systems}. 
+
+\bibitem{Yu} Yu, Y. \& Meng, X. (2012). To Center or Not to Center: That Is Not the
+Question-- An Ancillarity-Sufficiency Interweaving Strategy (ASIS) for Boosting MCMC Efficiency. {\itshape Journal of Computational and Graphical Statistics}. 20(3): 531-570. 
+\end{thebibliography}
+
+\newpage
+
+\appendix
+
+\section{Variational updates}
+\label{vi}
+\subsection{Probit Model}
+\label{probit}
+
+\noindent{\bf Variational Factors.} 
+
+\noindent{\bf Computing the ELBO.} Now we can write out the component terms of the ELBO more explicitly:
+
+\noindent{\bf CAVI Updates.} 
+%The simplest approach to variational inference maximizes the ELBO $\cl$ via coordinate-ascent, i.e. choosing the best value of a variational parameter with all others fixed. Iteratively applying these updates, the variational approximation $q$ improves at every step toward some local optimum. Conditional conjugacy yields closed form updates for $\widehat\gamma_k$ and $\widehat\lambda_{kl}$:
+
+\begin{itemize}
+\item {\bf Update to $q(\pi)$.} 
+\item {\bf Update to } 
+\item {\bf Update to }
+\end{itemize}
+
+
+\subsection{Linear Mixed Model}
+\label{lmm}
+
+
+\subsection{Normal Means Model}
+\label{normal}
+
+
+
+
+
+
+
+
+\end{document}
