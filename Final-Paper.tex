@@ -90,13 +90,13 @@ Since the KL-divergence is non-negative and vanishes precisely at $q(\theta) = p
 \end{align}
 The quantity $\mathcal L(q)$ (called the ELBO) lower bounds the model evidence, and the program (1) is equivalent to maximizing $\mathcal L(q)$. We may impose parametric assumptions on each variational factor $q(\theta_i) = q_{\widehat\tau_i}(\theta_i)$ to simplify the expectations in equation (2) and optimize over the choice of $\widehat\tau_i$---though we emphasize that in many cases these additional assumptions are unnecessary \cite{Beal,Blei}. Coordinate ascent variational inference (CAVI) maximizes $\mathcal L(q)$ over each factor individually with the others held fixed. 
 
-Note that CAVI does not recover the true posterior, in contrast with Gibbs sampling, which is {\sl asymptotically} exact. Compared to sampling, however, Variational Bayes tends to be more efficient, as we can leverage many tools from optimization. Both methods are known to converge slowly when the latent variables are well correlated in the posterior. In the appendix, we show this for a Gaussian posterior, where the rates for the Gibbs sampler (as computed in \cite{Sahu}) and CAVI actually match:
+Note that CAVI does not recover the true posterior, in contrast with Gibbs sampling, which is {\sl asymptotically} exact. Compared to sampling, however, variational Bayes tends to be more efficient, as we can leverage many tools from optimization. Both methods are known to converge slowly when the latent variables are well correlated in the posterior. In Appendix \ref{proofz}, we show this for a Gaussian posterior, where the rates for the Gibbs sampler (as computed in \cite{Sahu}) and CAVI actually match:
 
 {\bf Proposition 1.} Consider a model in which the posterior distribution has form
 \begin{align}
 p(\theta\mid X) \triangleq \mathcal N(\mu^*,\Lambda^{-1}),
 \end{align}
-where $\mu^* = (\mu_1^*,\mu_2^*)^{\mathsf T}$ and $\Lambda$ has blocks $\Lambda_{11}, \Lambda_{12},$ and $\Lambda_{22}$, and these means and precisions depend implicitly on the observation $X$. Then CAVI, which updates blocks $\theta_1$ and $\theta_2$ alternatingly, converges linearly at the same rate as the corresponding Gibbs sampler.
+where $\mu^* = (\mu_1^*,\mu_2^*)^{\mathsf T}$ and $\Lambda$ has blocks $\Lambda_{11}, \Lambda_{12},$ and $\Lambda_{22}$, and the posterior mean and precision depend implicitly on the observation $X$. Then CAVI, which updates blocks $\theta_1$ and $\theta_2$ alternatingly, converges linearly at the same rate as the corresponding Gibbs sampler, given by $\|\Lambda_{22}^{-1}\Lambda_{21}\Lambda_{11}^{-1}\Lambda_{12}\|_2$.
 
 \newpage
 
@@ -109,7 +109,7 @@ Instead of settling on a single model for their sampler, Yu \& Meng \cite{Yu} st
 \begin{align}
 \mu\sim p(\mu \mid \theta^t,X) \to \theta^{t+1}\sim p(\theta \mid \mu,X) \to \nu\sim p(\nu\mid \theta^{t+1},X) \to \theta^{t+2}\sim p(\theta\mid \nu, X).
 \end{align}
-(we consider this two steps since it is twice the work and since we get two draws of $\theta$). It is not hard to show that if the sufficient sampler converges linearly with rate $\gamma_{\text{suff}}$ to the true posterior and the ancillary sampler with rate $\gamma_{\text{anc}}$, then the alternating sampler above converges with rate at most $\sqrt{\gamma_{\text{suff}}\gamma_{\text{anc}}}$ to the true posterior. Since $\sqrt{\gamma_{\text{suff}}\gamma_{\text{anc}}} \le \gamma_{\text{suff}}\lor\gamma_{\text{anc}}$, the alternating sampler is never worse than the worse of the two individual samplers. In terms of optimization, we make a simple, related observation: 
+(we consider the above procedure to be two steps since it is comprised of two Gibbs steps). It is not hard to show that if the sufficient sampler converges linearly with rate $\gamma_{\text{suff}}$ to the true posterior and the ancillary sampler with rate $\gamma_{\text{anc}}$, then the alternating sampler above converges with rate at most $\sqrt{\gamma_{\text{suff}}\gamma_{\text{anc}}}$ to the true posterior. Since $\sqrt{\gamma_{\text{suff}}\gamma_{\text{anc}}} \le \gamma_{\text{suff}}\lor\gamma_{\text{anc}}$, the alternating sampler is never worse than the worse of the two individual samplers. In terms of optimization, we make a simple, related observation: 
 
 {\bf Proposition 2.} Suppose operators $S,T:\mathbb R^d\to\mathbb R^d$ are $\gamma_S$ and $\gamma_T$ contractions, respectively. Then $S\circ T$ is a $\gamma_S\gamma_T$-contraction. % Define $x^{2k+1} = S(x^{2k})$ and $x^{2k+2} = T(x^{2k+1})$ for $k\ge 0$. Then the iterates $\{x^k\}$ converge linearly with rate at most $\sqrt{\gamma_S\gamma_T}$. 
 
@@ -120,9 +120,9 @@ q(\mu) = &\argmax_{\widetilde q(\mu)} \mathcal L_\text{suff}(\widetilde q(\mu) q
 &\to q(\nu) = \argmax_{\widetilde q(\nu)} \mathcal L_\text{anc}(\widetilde q(\nu) q^{t+1}(\theta)) 
 \to q^{t+2}(\theta) = \argmax_{\widetilde q(\theta)} \mathcal L_\text{anc}(q(\nu) \widetilde q(\theta)) 
 \end{align*}
-by analogy with the alternating sampler above. In situations where proposition 2 applies, the iterates $q^t(\theta)$ of alternating CAVI will converge. Unfortunately, we cannot guarantee in general how the quality of the iterates of alternating CAVI compares to that of the individual CAVI updates. Since this is not guaranteed to converge faster than both models (only faster than the slower of the two), alternating CAVI leaves plenty to be desired. 
+by analogy with the alternating sampler above. In situations where proposition 2 applies, the iterates $q^t(\theta)$ of alternating CAVI will converge. Unfortunately, we cannot guarantee in general how the quality of the iterates of alternating CAVI compares to that of the individual CAVI updates. Since it is not guaranteed to converge faster than CAVI in a single model, alternating CAVI leaves plenty to be desired. %Employing alternating CAVI requires twice as many derivations, with no guarantee in speedup. 
 
-Yu \& Meng \cite{Yu} demonstrate theoretically and empirically that ``coupling is better than compromising." That is, with a slight tweak of the alternating sampler, we can achieve geometric convergence even in situations where neither individual sampler converges geometrically. Unfortunately, there is no direct analogue of the interweaving sampler they introduce for variational Bayes, so we consider their most basic example as a testing ground for strategies for accelerating CAVI.
+Yu \& Meng \cite{Yu} demonstrate theoretically and empirically that ``coupling is better than compromising." That is, with a slight tweak of the alternating sampler, we can achieve linear convergence even in situations where neither individual sampler converges linearly. Unfortunately, there is no direct analogue of their ``interweaving sampler" for variational Bayes, so in the next section, we consider a basic setting as a testing ground for strategies to accelerate CAVI.
 
 \subsection{Example: Normal Hierarchical Model} 
 
@@ -141,10 +141,10 @@ with a flat prior on $\theta$, the posterior is $\theta\mid X\sim\mathcal N(X,1+
 X\mid \nu,\theta
 &\sim \mathcal N(\nu +\theta,1)
 \end{align}
-There is a one-to-one relationship $\nu=\mu-\theta$ between the two augmentation schemes, but the performance of approximate posterior inference methods can differ depending on the choice of augmentation. We show in the appendix that the CAVI updates make the variational factors Gaussian with parameters 
+There is a one-to-one relationship $\nu=\mu-\theta$ between the two augmentation schemes, but the performance of approximate posterior inference methods can differ depending on the choice of augmentation. We show in Appendix \ref{normal} that the CAVI updates in the sufficient model have Gaussian variational factors with parameters 
 \begin{align*}
 \widehat\mu^{(t+1)}
-&= \frac{VX + \widehat\theta^{(t)}}{1+V} 
+&= \frac{VX + \widehat\theta^{(t)}_{SA}}{1+V} 
 &
 \widehat\theta^{(t+1)}_{SA}
 &= \widehat\mu^{(t+1)} \\
@@ -154,15 +154,15 @@ There is a one-to-one relationship $\nu=\mu-\theta$ between the two augmentation
 \widehat\sigma^{2(t+1)}_{\theta_{SA}}
 &= V
 \end{align*}
-Thus the variational parameter for the posterior variance of $\theta$ given $X$, $\widehat\sigma^{2(t+1)}_{\theta_{SA}}= V$ underestimates the true posterior variance $1+V$ (this is a well known property of variational Bayes). The variational parameter for the posterior mean of $\theta$ given $X$ satisfies
+Thus the variational parameter for the posterior variance of $\theta$ given $X$, $\widehat\sigma^{2(t+1)}_{\theta_{SA}}= V$,  underestimates the true posterior variance $1+V$ (this is a well known property of variational Bayes). The variational parameter for the posterior mean of $\theta$ given $X$ satisfies
 \begin{align*}
 \left|\widehat\theta^{(t+1)}_{SA} - X\right|
 &= \left|\frac{VX + \widehat\theta^{(t)}_{SA}}{1+V} - X\right| 
 = \frac{1}{1+V} \left|\widehat\theta^{(t)}_{SA}-X\right|,
 \end{align*}
-implying linear convergence with rate $\frac{1}{1+V}$. A similar calculation shows the variational parameter for the posterior mean $\widehat\theta^{(t)}_{AA}$ in the ancillary model converges linearly to $X$ with rate $\frac{V}{1+V}$. Since one of these CAVI updates converges slowly when the other converges quickly, they are called a beauty-and-beast pair \cite{Yu}. 
+implying linear convergence with rate $\frac{1}{1+V}$ to the true posterior mean $X$. A similar calculation shows the variational parameter for the posterior mean $\widehat\theta^{(t)}_{AA}$ in the ancillary model converges linearly to $X$ with rate $\frac{V}{1+V}$. Since one of these CAVI updates converges slowly when the other converges quickly, depending on the prior variance $V$, the pair of models are called a beauty-and-beast pair \cite{Papaspiliopoulos,van,Yu}. 
 
-Since in the SA model, $\mu$ is centered on the top-level mean $\theta$, and in the AA model, $\nu$ is non-centered, we can think of getting the best of both worlds by introducing a non-centering parameter $\alpha$ which we get to choose:
+Since in the SA model, $\mu$ is centered on the top-level mean $\theta$, and in the AA model, $\nu$ is non-centered, we may hope to get the best of both worlds by introducing a non-centering parameter $\alpha$ which we get to choose:
 \begin{align}
 \eta \mid \theta
 &\sim \mathcal N(\alpha,V) \\
@@ -182,7 +182,7 @@ If we update $q(\eta)$ and $q(\theta)$ with $\alpha=0$, we are doing CAVI update
 %\widehat\sigma^{2(1)}_{\theta}
 %&= 1
 \end{align*}
-Next, since $\alpha$ is taken to be the centering of $\eta$ in our partially-non-centered model, let $\alpha^{(1)} = \mathbb E_q[\eta]= \widehat\eta^{(1)}$. But since we know $\alpha=0$ to be the `correct' centering parameter, reparametrize the variational parameters
+as shown in Appendix \ref{normal}. Next, since $\alpha$ is taken to be the centering of $\eta$ in our partially-non-centered model, let $\alpha^{(1)} = \mathbb E_q[\eta]= \widehat\eta^{(1)}$. But since we know $\alpha=0$ to be the `correct' centering parameter, reparametrize the variational parameters
 \begin{align*}
 \widehat\eta^{(2)}
 &=  \widehat\eta^{(1)} - \alpha^{(1)} = 0
@@ -192,16 +192,16 @@ Next, since $\alpha$ is taken to be the centering of $\eta$ in our partially-non
 &=\widehat\theta^{(1)} + \alpha^{(1)} = X
 \end{align*}
 
-After this re-centering step, the algorithm has converged immediately to the minimizer, and it stays there. It shares this property with the interweaving strategy for sampling introduced by \cite{Yu}, as well as with second order optimization methods, since the ELBO for Gaussian models is a quadratic function. We sought to generalize this behavior in different ways before learning that it is a special case of {\sl parameter expanded variational Bayes} \cite{Qi}, described in the sequel. See figure \ref{nm_case} for a visual comparison of the rates of convergence for the three resulting algorithms.
+After this re-centering step, the algorithm has converged immediately to the minimizer, and it stays there. It shares this property with the interweaving strategy for sampling introduced by \cite{Yu}, which after one Gibbs step obtains i.i.d. draws from the true posterior in the same normal hierarchical model. Moreover, it shares this convergence property with second order optimization methods, since the ELBO for Gaussian models is a quadratic function. We sought to generalize this behavior in different ways before learning that it is a special case of {\sl Parameter Expanded Variational Bayes} (PX-VB) \cite{Qi}, described in the next section. See figure \ref{nm_case} for a visual comparison of the rates of convergence for the three resulting algorithms.
 
 
 \begin{figure}[h!]
 \centering
-    \begin{subfigure}[t]{0.35\textwidth}
+    \begin{subfigure}[t]{0.325\textwidth}
         \includegraphics[width=\textwidth]{Probit_real/nm_convergence1.png}
         %\subcaption{}
     \end{subfigure}
-          \begin{subfigure}[t]{0.35\textwidth}
+          \begin{subfigure}[t]{0.325\textwidth}
         \includegraphics[width=\textwidth]{Probit_real/nm_convergence2.png}
         %\subcaption{}
     \end{subfigure}
@@ -215,7 +215,7 @@ After this re-centering step, the algorithm has converged immediately to the min
 \section{Parameter Expanded Variational Bayes}
 \label{PXVB}
 
-We describe here the Parameter Expanded Variational Bayes (PX-VB) algorithm proposed in \cite{Qi}. Suppose we have a data model $p(X,\theta)$, where $\theta =  \{\theta_1, ... , \theta_K\}$ are parameters, and $X$ represents the observed data. In PX-VB, the data model is augmented with an auxiliary parameter $\alpha$. Denote this overparametrized model by $p_\alpha(\theta, X)$; and let $\alpha_0$ be the choice of $\alpha$ where the original model is recovered. PX-VB adds two additional steps to the standard CAVI algorithm. At every iteration, we run one step of CAVI, which outputs an approximate variational distribution. PX-VB then chooses an $\alpha$ with which we will expand the data model. The original objective is then recovered through reparametrization of the variational distribution. In other words, any changes incurred by adjusting the data model from $\alpha_0$ to $\alpha$ is absorbed into the variational distribution $q(\theta)$. 
+We describe here the Parameter Expanded Variational Bayes (PX-VB) algorithm proposed in \cite{Qi}. Suppose we have a data model $p(X,\theta)$, where $\theta =  \{\theta_i\}_{i=1}^K$ are latent variables, and $X$ represents the observed data. In PX-VB, the data model is augmented with an auxiliary parameter $\alpha$. Denote this overparametrized model by $p_\alpha(\theta, X)$; and let $\alpha_0$ be the choice of $\alpha$ where the original model is recovered. PX-VB adds two additional steps to the standard CAVI algorithm. At every iteration, we run one step of CAVI, which outputs an approximate variational distribution. PX-VB then chooses an $\alpha$ with which we will expand the data model. The original objective is then recovered through reparametrization of the variational distribution. In other words, any changes incurred by adjusting the data model from $\alpha_0$ to $\alpha$ is absorbed into the variational distribution $q(\theta)$. 
 
 
 
@@ -225,15 +225,15 @@ More precisely, at the $t$-th iteration, PX-VB does the following:
 \item {\bf Expand:} Choose $\alpha$ to minimize $D\big( \prod_{i=1}^K \tilde q^{(t)}(\theta_i) \| p_\alpha(\theta, X) \big)$.
 \item {\bf Reduce:} Choose a reparametrization $\theta \mapsto \hat\theta$ such that
 \begin{align*}
-D\Big( \prod_{i=1}^K \tilde q^{(t)}(\hat\theta_i) \,\big\|\, p_{0}(\hat\theta, X) \Big) = D\Big( \prod_{i=1}^K \tilde q^{(t)}(\theta_i) \,\big\|\, p_\alpha(\theta, X) \Big)
+D\Big( \prod_{i=1}^K \tilde q^{(t)}(\hat\theta_i) \,\big\|\, p_{\alpha_0}(\hat\theta, X) \Big) = D\Big( \prod_{i=1}^K \tilde q^{(t)}(\theta_i) \,\big\|\, p_\alpha(\theta, X) \Big)
 \end{align*}
 Set $q^{(t+1)}(\theta) = \tilde q^{(t)}(\hat\theta)$, and repeat. 
 \end{enumerate}
 
 
-Note that with these two added steps to CAVI, PX-VB remains a descent algorithm. In step 2, our choice of $\alpha$ ensures that the KL decreases, and in step three, we reparametrize $q^{(t)}(x)$ to maintain this KL. Therefore, one iteration of PX-VB should do no worse than one step of CAVI on its own. 
+Note that with these two added steps to CAVI, PX-VB remains a descent algorithm. In step (ii), our choice of $\alpha$ ensures that the KL decreases, and in step (iii), we reparametrize $q^{(t)}(x)$ to ensure that we minimize the original objective with $p_{\alpha_0}$ in the KL. Therefore, one iteration of PX-VB decreases the KL more than one iteration of CAVI does on its own. 
 
-The added steps of PX-VB increase the computational cost compared to CAVI, but with a proper choice of augmentation,  PX-VB often converges in fewer iterations, as we explore in the sequel. We see two explanations for such behavior. Firstly, the reparametrization allows for exploration of the parameter space in directions other than the coordinate axes. In the extreme case of the normal hierarchical model, PX-VB points the trajectory of the updates directly to the correct posterior means. Secondly, running CAVI to find an optimal mean field approximation suffers from slow convergence when the variables in the factorized distribution are strongly correlated. A good reparametrization in PX-VB helps decouple the these variables to achieve faster convergence. 
+The added steps of PX-VB increase the computational cost compared to CAVI, but with a proper choice of augmentation,  PX-VB often converges in fewer iterations, as we explore in the sequel. We offer two explanations for this behavior. Firstly, the reparametrization step (iii) allows for exploration of the parameter space in directions other than the coordinate axes. In the extreme case of the normal hierarchical model, PX-VB points the trajectory of the updates directly to the correct posterior means. Secondly, running CAVI to find an optimal mean field approximation suffers from slow convergence when the variables in the factorized distribution are strongly correlated. A good reparametrization in PX-VB helps decouple the these variables to achieve faster convergence. 
 
 
 
@@ -241,7 +241,7 @@ The added steps of PX-VB increase the computational cost compared to CAVI, but w
 \section{Example: Probit Regression}
 \label{probit}
 
-Following the example in \cite{Qi}, we explore the performance of PX-VB in the setting of Bayesian probit regression. Let $\{t_n\}_{n=1}^N$ be $\{-1,+1\}$--valued random variables. The design matrix $X\in\mathbb R^{N\times D}$ is fixed, and we place a normal prior on the parameter vector $w\in\mathbb R^D$. The generative model is
+Following the example in Qi \& Jaakkola \cite{Qi}, we explore the performance of PX-VB in the setting of Bayesian probit regression. Let $\{t_n\}_{n=1}^N$ be $\{-1,+1\}$--valued random variables. The design matrix $X\in\mathbb R^{N\times D}$ is fixed, and we place a normal prior on the parameter vector $w\in\mathbb R^D$. The generative model is
 \begin{align}
 w &\sim \mathcal N (0, v_0^2I_{D\times D}) \\
 t_n &\sim \text{Bern}(\Phi(w^\mathsf T x_n))\quad n = 1, ..., N \label{eq:gen_probit_1}
@@ -260,21 +260,21 @@ P(t_n = +1) &= P(z_n \geq 0) \quad \text{(by eqn. \ref{eq:gen_probit_2} )}\\
 which shows that $t_n$ is Bernoulli with parameter $\Phi(w^\mathsf Tx_n)$. 
 
 \subsection{Parameter updates}
-We will work with the second formulation where we introduced the latent $z_n$. To perform mean field variational inference, we take a fully factorized distribution over $\{z_n\}_{n=1}^N$ and $w$. In particular, 
+We work in the second formulation with the latent variables $z_n$. To perform mean field variational inference, we take a fully factorized distribution over $\{z_n\}_{n=1}^N$ and $w$. In particular, 
 \begin{align}
-    q_w(w) &\sim \mathcal N (\hat w, \hat\Sigma_w)\\
-    q_{z_n}(z_n) &\sim \mathcal{N}(\hat z_n, 1)\mathbb I\{\text{sign}(z_n) = t_n\} \quad n = 1, ..., N
+    q_w(w) &\triangleq \mathcal N (w;\hat w, \hat\Sigma_w)\\
+    q_{z_n}(z_n) &\triangleq \mathcal{N}(z_n;\hat z_n, 1)\mathbb I\{\text{sign}(z_n) = t_n\} \quad n = 1, ..., N
 \end{align}
-That is, $q_{z_n}$ follows a truncated normal distribution; $z_n$ is restricted to $[0,\infty)$ or $(-\infty,  0]$ when $t_n=1$ or $t_n=-1$, respectively. Our goal is to find parameters $\{\hat z_n\}_{n=1}^\infty$, $\hat w$, and $\hat\Sigma_w$ to minimize the KL divergence $D\big(q(w) \prod_{n=1}^N q(z_n)\|p(w, z| t)\big)$, where $p(w,z|t)$ is the true posterior distribution. 
+That is, $q_{z_n}$ follows a truncated normal distribution; $z_n$ is restricted to $[0,\infty)$ or $(-\infty,  0]$ when $t_n=1$ or $t_n=-1$, respectively. Our goal is to find parameters $\{\hat z_n\}_{n=1}^\infty$, $\hat w$, and $\hat\Sigma_w$ to minimize the KL divergence $D\big(q(w) \prod_{n=1}^N q(z_n)\|p(w, z| t)\big)$, where $p(w,z|t)$ is the posterior distribution. 
 
-Writing out this objective explicitly (see \ref{probit_append}) we find that the coordinate ascent updates for the variational parameters are given by 
+Writing out this objective explicitly (see Appendix \ref{probit_append}) we find that the CAVI updates for the variational parameters are given by 
 \begin{align}
     \hat z_n &= \hat w^T x_n \quad n = 1, ..., N\\
-    \Sigma_w &= (X^T X + v_0^{-2} I_{D\times d})^{-1}\\
-    \hat w &= (X^T X + v_0^{-2} I_{D\times d})^{-1} XE_q[z]
+    \hat \Sigma_w &= (X^T X + v_0^{-2} I_{D\times D})^{-1}\\
+    \hat w &= (X^T X + v_0^{-2} I_{D\times D})^{-1} XE_q[z]
 \end{align}
 
-We seek to use PX-VB to accelerate the convergence of CAVI. Following \cite{Qi}, we augment our model with an auxiliary parameter $\alpha$ as follows: 
+We seek to use PX-VB to accelerate the convergence of CAVI. Qi \& Jaakkola \cite{Qi} augment this model with an auxiliary parameter $\alpha$ as follows: 
 \begin{align}
     w &\sim \mathcal N (0, \alpha v_0^2I_{D\times D}) \\
     z_n &\sim \mathcal N (w^\mathsf T x_n, \alpha)\quad n = 1, ..., N \\
@@ -285,23 +285,23 @@ In other words, we expanded the original model $p(w,z,t|X)$ to $p_\alpha(w,z,t|X
    p_\alpha(w,z,t|X) = p(\alpha w, \alpha z, t|X)
 \end{align}
 
-At the $t$th iteration, we run one step of CAVI, resulting in a proposed intermediate approximation denoted $\tilde q^{(t)}$. Then in step (ii) of PX-VB, we minimize $D\big(\tilde q(w) \prod_{n=1}^N \tilde q^{(t)}(z_n) \| p_\alpha(w,z,t|X) \big)$ with respect to $\alpha$ and find the minimizer $\alpha^*$ to satisfy: 
+At the $t$th iteration of PX-VB, we run one step of CAVI, resulting in a proposed intermediate approximation denoted $\tilde q^{(t)}$. Then in step (ii) of PX-VB, we minimize $D\big(\tilde q(w) \prod_{n=1}^N \tilde q^{(t)}(z_n) \| p_\alpha(w,z,t|X) \big)$ with respect to $\alpha$ and find the minimizer $\alpha^*$ to satisfy: 
 \begin{align}
-    \alpha^{*2} = \frac{1}{N+M} \Big(\sum_{n=1}^N E_q[z_n^2] - 2E_q[z_n] \hat w^\mathsf Tx_n + x_n^\mathsf T E_q[w w^\mathsf T] w_n\Big) + \frac{1}{v_0^2(N+M)} E_q[w w^\mathsf T]
+    \alpha^{*2} = \frac{1}{N+D} \Big(\sum_{n=1}^N E_q[z_n^2] - 2E_q[z_n] \hat w^\mathsf Tx_n + x_n^\mathsf T E_q[w w^\mathsf T] w_n\Big) + \frac{1}{v_0^2(N+D)} E_q[w w^\mathsf T]
 \end{align}
 
 And in step (iii) the original model is recovered by taking
 \begin{align}
     q^{(t+1)}(w) = \tilde q^{(t)}(w/\alpha^*) \quad \text{and} \quad q^{(t+1)}(z_n) = \tilde q^{(t)}(z_n/\alpha^*)
 \end{align}
-Note that the added steps in PX-VB are relatively computationally inexpensive, and in the following sections, we explore the gains in the rate of convergence. 
+The derivation of these steps are shown in Appendix~\ref{probit_append}. Note that the added steps in PX-VB are relatively computationally inexpensive, and in the subsequent sections, we explore the gains in the rate of convergence. 
 
 \subsection{Convergence results on simulated data}
-We compare the convergence of three algorithms: CAVI, PX-VB, and Newton conjugate gradient trust region. First, we applied these algorithms on simulated data: we took the number of data points to be $N = 500$ and the dimension of the parameter $w$ to be $D= 20$. The results are displayed in figure~\ref{fig:Probit_synth}. 
+We compare the convergence of three algorithms: CAVI, PX-VB, and Newton conjugate gradient trust-region (NCG) \cite{Nocedal}. First, we applied these algorithms on synthetic data drawn from the generative model: we took the number of data points to be $N = 500$ and the dimension of the parameter $w$ to be $D= 20$. The results are displayed in figure~\ref{fig:Probit_synth}. 
 
-We see that in comparing CAVI and PX-VB, PX-VB converged in shorter time. The difference in consecutive CAVI iterates reached $10^{-12}$ in about 30 seconds, while PX-VB reached this threshold in about 1/6th the time (figure~\ref{fig:Probit_synth}a). In the ELBO plot (figure~\ref{fig:Probit_synth}b), PX-VB also became close to the optima in two iterations and beat CAVI in wall time. 
+PX-VB converges roughly six times faster than CAVI. The difference in consecutive CAVI iterates reached $10^{-12}$ in about 30 seconds, while PX-VB reached this threshold in about $5$ seconds  (figure~\ref{fig:Probit_synth}a). In the ELBO plot (figure~\ref{fig:Probit_synth}b), PX-VB also became close to the optimum in two iterations. %and is faster than CAVI in wall time. 
 
-The Newton method was the slowest of the three algorithm. In our simulation, an iteration takes $\sim10^2$ more time to compute than a step of CAVI or PXVB. This is due to the high dimensional parameter space, since we have a variational parameter for each of the $N$ data points. 
+The Newton method was the slowest of the three algorithms. In our experiment, one of Newton step takes $\sim10^2$ more time to compute than a step of CAVI or PX-VB. This is unsurprising due to the high dimensional parameter space, since we have a variational parameter for each of the $N$ data points. 
 
 
 \begin{figure}[tb]
@@ -320,9 +320,9 @@ The Newton method was the slowest of the three algorithm. In our simulation, an 
 
 
 \subsection{Convergence results on SPAM data}
-We also compared the convergence of the three algorithms applied to a probit regression problem on email SPAM data~\cite{Efron}. Here, the observed variables $t_n$ are +1 and -1, indicating whether an email was spam or not spam, respectively. $N=4601$ emails were examined, and each feature vector $x_n$ describes the prevalence of a word or character (such as "money", "free", "!"). In total, there were $57$ features and an added intercept, so $D = 58$. 
+We also compared the convergence of the three algorithms applied to a probit regression problem on email SPAM data~\cite{Efron}. Here, the observed variables $t_n$ are $+1$ and $-1$, indicating whether an email was spam or not spam, respectively. $N=4601$ emails were examined, and each feature vector $x_n$ describes the prevalence of a word or character (such as "money", "free", or "!"). In total, there were $57$ features and an added intercept, so $D = 58$. 
 
-Figure~\ref{fig:Probit_spam} shows the rate of convergence of the three algorithms.  Again, Newton is slow compared to CAVI and PX-VB. And PX-VB is exhibits the fastest among all three. 
+Figure~\ref{fig:Probit_spam} shows convergence of the three algorithms CAVI, PX-VB, and Newton conjugate gradient on the SPAM data.  Again, Newton is slow compared to CAVI and PX-VB, and PX-VB exhibits much faster convergence than CAVI. 
 
 
 \begin{figure}[tb]
@@ -338,7 +338,7 @@ Figure~\ref{fig:Probit_spam} shows the rate of convergence of the three algorith
     \label{fig:Probit_spam}
 \end{figure}
 
-All three algorithms converged to the same $\hat w$, our variational estimate for the posterior mean for the parameter vector $w$.  Table~\ref{table:Spam_table} shows our estimate for a few selected keywords. Notably, the words "lab", "cs", "meeting", and "george" (the name of the emails' recipient) are strong indicators for an email being not spam, matching our intuition that an email containing work related terms, or knowing the recipient's name, is an indication of not spam. Conversely, emails containingg the \$ or \# are indicative of spam. 
+All three algorithms converged to the same $\hat w$, our variational estimate for the posterior mean for the parameter vector $w$.  Table~\ref{table:Spam_table} shows our estimate for a few selected keywords. Notably, the words "lab", "cs", "meeting", and "george" (the name of the emails' recipient) are strong indicators for an email being not spam, matching our intuition that an email containing work related terms, or knowing the recipient's name, suggests not spam. Conversely, emails containing the \$ or \# are indicative of spam. 
 
 
 \begin{table}[tb]
@@ -358,31 +358,31 @@ Estimate $\widehat w$ & -7.66 & 0.46 & -1.78 & -1.85 & 0.16 & 2.30 & 1.35\\
 \end{tabular}
 \vspace{0.5em}
 
-\caption{Probit regression analysis of the SPAM dataset. Estimated regression coefficients from CAVI for $14$ example keyword predictors (total number of keywords was 57). Note that the recipient of the emails is named \texttt{george}.}
+\caption{Probit regression analysis of the SPAM dataset. Estimated regression coefficients from CAVI for $14$ example keyword predictors (total number of keywords was 57). The estimates among all three algorithms agree. Note that the recipient of the emails is named \texttt{george}.  }
 \label{table:Spam_table}
 \end{table}
 
 
 \section{Example: Linear Mixed Models} 
-As in the Probit model, let $X\in \mathbb{R}^{N\times D}$ be a fixed design matrix, with rows $x_n, n = 1,..., N$. We also assume the variances $\sigma^2_\beta, \sigma^2_\mu$, and $\sigma^2_y$ are fixed and known. Let the number of groups be $N_G$, and let the mapping $g(n)\mapsto \{1, ..., N_G\}$ denote the group to which the $n$-th individual belongs. Then the linear mixed model is formulated is follows: 
+Linear mixed models add group level effects to standard linear regression. Let $X\in \mathbb{R}^{N\times D}$ be a fixed design matrix, with rows $x_n, n = 1,..., N$. We also assume the variances $\sigma^2_\beta, \sigma^2_\mu$, and $\sigma^2_y$ are fixed and known. Let the number of groups be $N_G$, and let the mapping $g(n)\mapsto \{1, ..., N_G\}$ denote the group to which the $n$-th individual belongs. Then the linear mixed model is formulated is follows: 
 \begin{align}
 \beta &\sim \mathcal N(0, \sigma^2_\beta I_{D\times D}) \label{eq:lmm_prior1}\\
 \mu_g &\sim \mathcal N(0, \sigma^2_\mu) \quad \text{for $g= 1, ..., N_G$} \label{eq:lmm_prior2}\\
 y_n | \mu_g, \beta &\sim \mathcal N (x_n^T\beta + \mu_{g(n)}, \sigma^2_y)\quad \text{for $n = 1, ..., N$}\label{eq:lmm_LH}
 \end{align}
-We take a fully factorized distribution over $\beta$ and $\{\mu_g\}_{g=1}^{N_G}$. In particular, 
+We make a fully factorized approximation to the posterior in this model. The variational factors have form 
 \begin{align}
-q_\beta(\beta) &\sim \mathcal N (\hat \beta, \Sigma_\beta)\\
-q_{\mu_g}(\mu_g) &\sim \mathcal{N}(\hat\mu_g, \tau^2_{\mu_g}) \quad \text{for }g = 1, ..., N_G
+q_\beta(\beta) &\triangleq \mathcal N (\beta; \hat \beta, \Sigma_\beta)\\
+q_{\mu_g}(\mu_g) &\triangleq \mathcal{N}(\mu_g; \hat\mu_g, \tau^2_{\mu_g}) \quad \text{for }g = 1, ..., N_G
 \end{align}
 
 \subsection{Parameter updates}
-The updates for the variational parameters $\hat\beta$, $\Sigma_\beta$, $\hat\mu_g$, and $\tau^2_{\mu_g}$ are standard exponential family computations (see ~\ref{lmm_append}). They are given by 
+The updates for the variational parameters $\hat\beta$, $\Sigma_\beta$, $\hat\mu_g$, and $\tau^2_{\mu_g}$ are standard exponential family computations (see Appendix~\ref{lmm_append}). They are given by 
 \begin{align}
 {\tau^2_{\mu_g}} &= \Big(\frac{1}{\sigma^2_\mu} + \frac{|\{n : g(n) = g\}|}{\sigma^2_y}\Big)^{-1}\\
 {\hat\mu_g} &= \Big(\frac{1}{\sigma^2_\mu} + \frac{|\{n : g(n) = g\}|}{\sigma^2_y}\Big)^{-1}\Big(\frac{1}{\sigma^2_y}\sum_{n: g(n) = g} (y_n - x_n^T\hat\beta)\Big) \label{eq:lmm_mu_upd}
 \end{align}
-for $g = 1, ..., N_G$. and 
+for $g = 1, ..., N_G$. And 
 \begin{align}
 \Sigma_\beta &= (\frac{1}{\sigma^2_\beta} + \frac{1}{\sigma^2_y}XX^T)^{-1}\\
 \hat\beta &= (\frac{1}{\sigma^2_\beta} + \frac{1}{\sigma^2_y}XX^T)^{-1}\Big(\frac{1}{\sigma^2_y}\sum_{n=1}^N  x_n(y_n - \hat\mu_{g(n)} )\Big)
@@ -401,7 +401,7 @@ And the reparametrization step (iii) is done by
 \begin{align}
     q^{(t+1)}(\mu_g) = \tilde q^{(t)}(\mu_g\alpha^*) \quad \text{and} \quad q^{(t+1)}(\beta) = \tilde q^{(t)}(\beta)
 \end{align}
-See appendix~\ref{lmm_append} for the derivation of these updates. 
+See Appendix~\ref{lmm_append} for the derivation of these updates. 
 
 
 
@@ -422,7 +422,7 @@ Now recalling $\alpha^*$ from equation~\ref{eq:lmm_alpha}, we show that this wil
 
 Therefore, PX-VB behaves similarly to CAVI when $\sigma_\mu^2$ is large since $\alpha \approx 0$, and our reparametrization step is not doing much. 
 
-When $\sigma_\mu^2$ is small however, our reparametrization appears to hinder the convergence of CAVI. Taking an optimization viewpoint, it is possible that searching in the coordinate direction already corresponds to good directions-- observe CAVI's near linear rate of convergence in figure~\ref{fig:lmm}a, and what appears to be one step convergence of the elbo in figure~\ref{fig:lmm}b-- and therefore, any reparametrization forces the trajectory away from these good directions. 
+When $\sigma_\mu^2$ is small however, our reparametrization appears to hinder the convergence of CAVI. Taking an optimization viewpoint, it is possible that searching in the coordinate direction already corresponds to good directions---observe CAVI's near linear rate of convergence in figure~\ref{fig:lmm}a, and what appears to be one step convergence of the elbo in figure~\ref{fig:lmm}b---and therefore, any reparametrization forces the trajectory away from these good directions. 
 
 
 
@@ -444,14 +444,14 @@ When $\sigma_\mu^2$ is small however, our reparametrization appears to hinder th
             \subcaption{}
     \end{subfigure}
     \caption{Comparing the convergence of PXVB and CAVI in two regimes. For all plots, there were $N_G = 10$ groups, and $n = 50$ observations per group. The dimension of the parameter vector $\beta$ was $D = 20$. In the {\itshape top row}, the prior variance for $\mu_g$ was $10^{-4}$, while in the {\itshape bottom row}, the prior variance was 100. } %The consecutive differences in the second order method did not exhibit as much regularity, so they are omitted on the first plot.}
-    \label{fig:LMM}
+    \label{fig:lmm}
 \end{figure}
 
 
 
 
 \section{Discussion and future directions}
-We found that in our Bayesian probit regression problem, PX-VB speeds up the convergence of variational methods compared to coordinate ascent and Newton conjugate gradient, two standard algorithms in optimization. The advantage to a Newton method is that there exist "black box" implementations of such algorithms in most standard optimization packages. The only requirement is that one must be able to write down the objective function, in our case the evidence lower bound. However, in variational methods, the optimization is often conducted over a high dimensional parameter space. For example, in probit regression, there is one variational parameter for each data point. This results in high computational complexity at each iteration. This phenomenon is well exhibited in our results, where Newton suffers in terms of wall time, even though the number of iterations required for convergence is smaller than CAVI or PX-VB. 
+We found that in our Bayesian probit regression problem, PX-VB speeds up the convergence of variational methods compared to coordinate ascent and Newton conjugate gradient, two standard algorithms in optimization. The advantage to a Newton method is that there exist "black box" implementations of such algorithms in most standard optimization packages. The only requirement is that one must be able to write down the objective function (in our case the evidence lower bound) in vectorized code and derivatives are approximated with automatic differentiation. However, in variational methods, the optimization is often conducted over a high dimensional parameter space. For example, in probit regression, there is one variational parameter for each data point. This results in high computational complexity at each iteration. This phenomenon is well exhibited in our results, where Newton suffers in terms of wall time, even though the number of iterations required for convergence is smaller than CAVI or PX-VB. 
 
 Thus, this result suggest that there are real gains in convergence time to deriving updates for coordinate descent. While CAVI requires more iterations to converge than Newton, each iteration is very cheap to compute. 
 
@@ -503,6 +503,7 @@ We would like to thank Professor Wainwright and Fanny for their dedication to te
 \bibitem{Grimmer} Grimmer, J. (2011). An Introduction to Bayesian Inference via Variational Approximations. {\itshape Political Analysis}. 19(1): 32-47.
 
 \bibitem{Luo} Luo, Z. Q. \& Tseng, P. (1992). On the Convergence of the Coordinate Descent Method for Convex Differentiable Minimization. {\itshape Journal of Optimization Theory and Applications} 72(1): 7-35. 
+\bibitem{Nocedal} Nocedal, J. \& Wright, S. (2006). Numerical Optimization. {\itshape Springer}
 
 \bibitem{Papaspiliopoulos} Papaspiliopoulos, O., Roberts, G. O., and Skold, M. (2003), Non-Centered Parameterisations for Hierarchical Models and Data Augmentation. {\sl Bayesian Statistics} 307-326
 
@@ -522,7 +523,7 @@ Question-- An Ancillarity-Sufficiency Interweaving Strategy (ASIS) for Boosting 
 \appendix
 
 \section{Proofs of Propositions}
-
+\label{proofz}
 \begin{proof} (of {\bf Proposition 1}) From \cite{Barber} [ch. 8] we know the conditionals have the form 
 \begin{align}
 p(\theta_1\mid X,\theta_2) 
@@ -576,7 +577,7 @@ This rate $\gamma$ matches the rate of convergence of the corresponding block Gi
 
 
 \section{Probit Model Calculations}
-\label{vi}
+\label{probit_append}
 
 \noindent{\bf Computing the ELBO.} Recall that the ELBO is given by:
 \begin{align}
@@ -637,7 +638,7 @@ H(q(w)) &= -E_q[\log q(w) ] = \frac{1}{2}\log \big((2\pi e)^D |\Sigma_w|)
 
 Putting together the pieces, the ELBO is given by
 \begin{align*}
-\mathcal L = 
+\mathcal L 
 %- \frac{1}{2v_0^2}& (\text{Tr}(\Sigma_w) + \hat w^T \hat w) 
 %+  \frac{1}{2}\log \big((2\pi e)^D |\Sigma_w|)\\
 %&+\sum_{n : t_n = 1} -\frac{1}{2}\Big(1 + \hat z_n^2  + \hat z_n \frac{\phi(-\hat z_n)}{1 - \Phi(-\hat z_n)}\Big) + \hat w^Tx_n\Big(\hat z_n + \frac{\phi(-\hat z_n)}{1 - \Phi(-\hat z_n)}\Big) + \log\Big(\sqrt{2\pi e} (1- \Phi(-\hat z_n))\Big) - \frac{1}{2}\hat z_n\frac{ \phi(-\hat z_n)}{1 - \Phi(-\hat z_n)}\\
@@ -667,81 +668,93 @@ Putting together the pieces, the ELBO is given by
 \noindent{\bf CAVI Updates.} 
 %The simplest approach to variational inference maximizes the ELBO $\cl$ via coordinate-ascent, i.e. choosing the best value of a variational parameter with all others fixed. Iteratively applying these updates, the variational approximation $q$ improves at every step toward some local optimum. Conditional conjugacy yields closed form updates for $\widehat\gamma_k$ and $\widehat\lambda_{kl}$:
 
-\begin{itemize}
-\item {\bf Update to } 
-\item {\bf Update to }
-\end{itemize}
+The objective is separable in $\hat z_n$, and is maximized by making the cross term within the sum vanish. Thus the update for this term is $\hat z_n^{t+1}=(\hat w^t)^Tx_n$. Differentiating the objective with respect to $\hat w$, 
+\begin{align*}
+0
+= - \frac{1}{v_0^2}&  \hat w
+- X^{\mathsf T}X\hat w -\sum_{n=1}^N
+ t_nx_n \frac{\phi(-\hat z_n)}{\Phi(t_n\hat z_n)}
+ + x_n\hat z_n 
+\end{align*}
+Rearranging gives $\left(X^{\mathsf T} X + \frac{1}{v_0^2}I\right)\hat w = \sum_{n=1}^N\left(\hat z_n - 
+ t_n\frac{\phi(-\hat z_n)}{\Phi(t_n\hat z_n)} \right)x_n = X\mathbb E_q[Z]$.
 
-\noindent{\bf PX-VB Updates.} 
+\noindent{\bf PX-VB Updates.} The ELBO with the additional free parameter $\alpha$ becomes $\mathcal L_\alpha(\hat w,\hat z) = \mathbb E_q\left[\log\frac{p_1(\alpha w,\alpha z,X,t)}{q(w,z)}\right]$. Hence the entropic terms keep their scale and the contributions from the numerator scale $\hat w$ and $\hat z_n$ by $\alpha$. Differentiating in $\alpha$, 
+\begin{align*}
+(N+D)\alpha^{*2}
+&= \frac{1}{v_0^2}\hat w^T \hat w 
++ \sum_{n=1}^N  \Big(x_n^T(\hat w \hat w^T)x_n\Big)
++\sum_{n=1}^N\hat z_n^2
+ + 2\hat w^Tx_n\hat z_n - t_n\hat z_n\frac{\phi(-\hat z_n)}{\Phi(t_n\hat z_n)}\\
+&=\frac{1}{v_0^2} E_q[w w^\mathsf T] +  \Big(\sum_{n=1}^N E_q[z_n^2] - 2E_q[z_n] \hat w^\mathsf Tx_n + x_n^\mathsf T E_q[w w^\mathsf T] w_n\Big) .
+\end{align*}
 
 \newpage
 
 \section{Linear Mixed Model Calculations}
+\label{lmm_append}
 \noindent{\bf Computing the ELBO}: 
-We compute the ELBO
+We have
 \begin{align}
 \mathcal L &= E_q[\log p(y,\mu,\beta|X)] + H(q) \\
-	&=-\frac{1}{2\sigma^2_\beta}E_q[\beta^T\beta] - \frac{1}{2\sigma^2_\mu}\sum_{g=1}^{N_G} E_q[\mu_g^2] - \frac{1}{2\sigma^2_y}\sum_{n=1}^N E_q[(y_n - x_n^T\beta - \mu_{g(n)})^2] -\sum_{g=1}^{N_g}E_q[\log q_{\mu_g}] - E_q[\log q_\beta(\beta)]
+	&=-\frac{1}{2\sigma^2_\beta}E_q[\beta^T\beta] - \frac{1}{2\sigma^2_\mu}\sum_{g=1}^{N_G} E_q[\mu_g^2] \\
+	&~~~- \frac{1}{2\sigma^2_y}\sum_{n=1}^N E_q[(y_n - x_n^T\beta - \mu_{g(n)})^2] -\sum_{g=1}^{N_g}E_q[\log q_{\mu_g}(\mu_g)] - E_q[\log q_\beta(\beta)]
 \end{align} 
-
 We examine each of these terms individually. First, 
 \begin{align}
 -\frac{1}{2\sigma^2_\beta} E_q[\beta^T\beta] = -\frac{1}{2\sigma^2_\beta} (\text{Tr}(\Sigma_\beta) + \hat \beta^T \hat\beta) 
 \end{align}
-
 Next, 
-\begin{align*}
+\begin{align}
 - \frac{1}{2\sigma^2_\mu}\sum_{g=1}^{N_G} E_q[\mu_g^2] = - \frac{1}{2\sigma^2_\mu}\sum_{g=1}^{N_G}(\tau^2_{\mu_g} + \hat\mu_g^2)
-\end{align*}
-
+\end{align}
 Furthermore, 
-\begin{align*}
+\begin{align}
  - \frac{1}{2\sigma^2_y}\sum_{n=1}^N &E_q[(y_n - x_n^T\beta - \mu_{g(n)})^2] \\
  &=  - \frac{1}{2\sigma^2_y}\sum_{n=1}^N \Big(E_q[\mu_{g(n)}^2] - 2\hat\mu_{g(n)}(y_n - x_n^T\hat\beta) + E_q[(x_n^T\beta)^2] - 2y_n (x_n^T\hat\beta)\Big)\\
  &= - \frac{1}{2\sigma^2_y}\sum_{n=1}^N \Big((\tau^2_{\mu_{g(n)}} + \hat\mu_{g(n)}^2) - 2\hat\mu_{g(n)}(y_n - x_n^T\hat\beta)\Big) - \frac{1}{2\sigma^2_y} \text{Tr}(X^T(\Sigma_\beta + \hat\beta\hat\beta^T)X) + \frac{1}{\sigma^2_y} y^TX^T\hat\beta
-\end{align*}
+\end{align}
 And the entropy of a Gaussian is given by 
-\begin{align*}
+\begin{align}
 -E_q[\log q_{\mu_g}(\mu_g)] = \frac{1}{2} \log(2\pi e \sigma_{\mu_g}^2)\\
 -E_q[\log q_{\beta}(\beta)] = \frac{1}{2} \log((2\pi e)^D |\Sigma_{\beta}|)
-\end{align*}
-
+\end{align}
 Putting the pieces together, 
 \begin{align*}
-\mathcal L = -\frac{1}{2\sigma^2_\beta} (\text{Tr}(\Sigma_\beta) + \hat \beta^T \hat\beta)- &\frac{1}{2\sigma^2_\mu}\sum_{g=1}^{N_G}(\tau^2_{\mu_g} + \hat\mu_g^2)- \frac{1}{2\sigma^2_y}\sum_{n=1}^N \Big((\tau^2_{\mu_{g(n)}} + \hat\mu_{g(n)}^2) - 2\hat\mu_{g(n)}(y_n - x_n^T\hat\beta)\Big) - \frac{1}{2\sigma^2_y} \text{Tr}(X^T(\Sigma_\beta + \hat\beta\hat\beta^T)X) \\
-&+ \frac{1}{\sigma^2_y} y^TX^T\hat\beta+\sum_{g=1}^{N_G}\frac{1}{2} \log(2\pi e \tau_{\mu_g}^2) + \frac{1}{2} \log((2\pi e)^D |\Sigma_{\beta}|)
+\mathcal L = -\frac{1}{2\sigma^2_\beta} (\text{Tr}(\Sigma_\beta) + \hat \beta^T \hat\beta)- &\frac{1}{2\sigma^2_\mu}\sum_{g=1}^{N_G}(\tau^2_{\mu_g} + \hat\mu_g^2)- \frac{1}{2\sigma^2_y}\sum_{n=1}^N \Big((\tau^2_{\mu_{g(n)}} + \hat\mu_{g(n)}^2) - 2\hat\mu_{g(n)}(y_n - x_n^T\hat\beta)\Big) \\- \frac{1}{2\sigma^2_y} &\text{Tr}(X^T(\Sigma_\beta + \hat\beta\hat\beta^T)X) 
++ \frac{1}{\sigma^2_y} y^TX^T\hat\beta+\sum_{g=1}^{N_G}\frac{1}{2} \log(2\pi e \tau_{\mu_g}^2) + \frac{1}{2} \log((2\pi e)^D |\Sigma_{\beta}|)
 \end{align*}
  
 \noindent{\bf CAVI updates}
 We examine the log likelihood, and derive our updates by exploiting the fact that our likelihood and variational distributions are exponential families. Firstly, 
-\begin{align*}
+\begin{align}
 \log p(y, \mu, \beta | X) = -\frac{1}{2\sigma^2_\beta}\beta^T\beta - \frac{1}{2\sigma^2_\mu}\sum_{g=1}^{N_G} \mu_g^2 - \frac{1}{2\sigma^2_y}\sum_{n=1}^N (y_n - x_n^T\beta - \mu_{g(n)})^2 + K
-\end{align*}
+\end{align}
 For a choice $g\in\{1, ..., N_G\}$, we seek the updates for $\mu_g$. We take expectations of the log likelihood with respect to the variational distribution of $\beta$ and $\mu_i$ $i\not=g$, dropping constants independent of $\mu_g$: 
-\begin{align*}
+\begin{align}
 E_{\beta, \mu_{(-g)}} [ \log p(y, \mu, \beta | X) ] &=  - \frac{1}{2\sigma^2_\mu} \mu_g^2 - \frac{1}{2\sigma^2_y}\sum_{n: g(n) = g} E_{\beta}[(y_n - x_n^T\beta - \mu_{g})^2] + K\\
 	&= - \frac{1}{2\sigma^2_\mu} \mu_g^2 - \frac{|\{n : g(n) = g\}|}{2\sigma^2_y} \mu_g^2 + \frac{\mu_g}{\sigma^2_y}\sum_{n: g(n) = g} (y_n - x_n^T\hat\beta) + K
-\end{align*}
+\end{align}
 Now recall that the canonical parametrization of a Gaussian in exponential family form is given by $\log p(x) = -\frac{1}{2\sigma^2} x^2 + \frac{\mu}{\sigma^2}x + K$. Comparing these two forms, the updates for $\mu_g$ must satisfy
-\begin{align*}
+\begin{align}
 \frac{1}{\tau^2_{\mu_g}} &= \frac{1}{\sigma^2_\mu} + \frac{|\{n : g(n) = g\}|}{\sigma^2_y}\\
 \frac{\hat\mu_g}{\tau^2_{\mu_g}} &= \frac{1}{\sigma^2_y}\sum_{n: g(n) = g} (y_n - x_n^T\hat\beta)
-\end{align*}
+\end{align}
 Rearranging, 
-\begin{align*}
+\begin{align}
 {\tau^2_{\mu_g}} &= \Big(\frac{1}{\sigma^2_\mu} + \frac{|\{n : g(n) = g\}|}{\sigma^2_y}\Big)^{-1}\\
 {\hat\mu_g} &= \Big(\frac{1}{\sigma^2_\mu} + \frac{|\{n : g(n) = g\}|}{\sigma^2_y}\Big)^{-1}\Big(\frac{1}{\sigma^2_y}\sum_{n: g(n) = g} (y_n - x_n^T\hat\beta)\Big)
-\end{align*}
+\end{align}
 We use a similar technique to find the updates for $\beta$. Taking expectations with respect to all the $\mu_g$'s, 
-\begin{align*}
+\begin{align}
 E_\mu[\log p(y, \mu, \beta | X) ] &=  -\frac{1}{2\sigma^2_\beta}\beta^T\beta  - \frac{1}{2\sigma^2_y}\sum_{n=1}^N ((x_n^T\beta)^2 - 2(x_n^T\beta)(y_n - \hat\mu_{g(n)} )) + K\\
 	&=  -\frac{1}{2\sigma^2_\beta}\beta^T\beta  - \frac{1}{2\sigma^2_y} \beta^TXX^T\beta + \frac{1}{\sigma^2_y}\beta^T\Big(\sum_{n=1}^N  x_n(y_n - \hat\mu_{g(n)} )\Big) + K
-\end{align*}
-And comparing with the canonical exponential family paramatrization, we conclude that the updates are given by
-\begin{align*}
+\end{align}
+And comparing with the canonical exponential family parametrization, we conclude that the updates are given by
+\begin{align}
 \Sigma_\beta &= (\frac{1}{\sigma^2_\beta} + \frac{1}{\sigma^2_y}XX^T)^{-1}\\
 \hat\beta &= (\frac{1}{\sigma^2_\beta} + \frac{1}{\sigma^2_y}XX^T)^{-1}\Big(\frac{1}{\sigma^2_y}\sum_{n=1}^N  x_n(y_n - \hat\mu_{g(n)} )\Big)
-\end{align*}
+\end{align}
 
 
 \noindent{\bf PX-VB updates}
