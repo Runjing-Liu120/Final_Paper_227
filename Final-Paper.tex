@@ -370,7 +370,7 @@ Linear mixed models add group level effects to standard linear regression. Let $
 \mu_g &\sim \mathcal N(0, \sigma^2_\mu) \quad \text{for $g= 1, ..., N_G$} \label{eq:lmm_prior2}\\
 y_n | \mu_g, \beta &\sim \mathcal N (x_n^T\beta + \mu_{g(n)}, \sigma^2_y)\quad \text{for $n = 1, ..., N$}\label{eq:lmm_LH}
 \end{align}
-We make a fully factorized approximation to the posterior in this model. The variational factors have form 
+We make a fully factorized approximation to the posterior in this model. The variational factors are
 \begin{align}
 q_\beta(\beta) &\triangleq \mathcal N (\beta; \hat \beta, \Sigma_\beta)\\
 q_{\mu_g}(\mu_g) &\triangleq \mathcal{N}(\mu_g; \hat\mu_g, \tau^2_{\mu_g}) \quad \text{for }g = 1, ..., N_G
