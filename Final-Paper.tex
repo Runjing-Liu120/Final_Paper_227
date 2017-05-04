@@ -22,14 +22,14 @@
 \usepackage{microtype}      % microtypography
 \usepackage{color}
 \usepackage{graphicx}
-\usepackage{amssymb,amsfonts,amsmath,graphicx}    
+\usepackage{amssymb,amsthm,amsfonts,amsmath,graphicx}    
 \usepackage[shortlabels]{enumerate}
 \usepackage[options ]{algorithm2e}
 \graphicspath{ {../figures/} }
 \input{stat-macros}
 
 \usepackage{subcaption}
-
+\renewcommand{\qedsymbol}{$\spadesuit$}
 
 \title{Data Augmentation to Accelerate Convergence of Variational Bayes}
 
@@ -102,14 +102,36 @@ where $\mu^* = (\mu_1^*,\mu_2^*)^{\mathsf T}$ and $\Lambda$ has blocks $\Lambda_
 
 \subsection{Reparametrization for Accelerated Convergence} 
 
-\subsection{Example: Normal Hierarchical Model} 
+Observing the high-level connections between convergence rates for Gibbs sampling and CAVI, we posit that schemes for accelerating convergence of samplers may be successfully imported into quickly converging variational Bayesian methods, and their properties may be better understood from an optimization perspective. In particular, an important tool in the MCMC literature for reducing posterior dependencies is {\sl data augmentation}, i.e. introducing intermediate latent variables $\mu$, and calculating the posterior of $(\mu,\theta)$ given $X$. In a sampler, this requires draws from the complete conditionals $\theta_i \mid \theta_{\setminus i},\mu,X$ (or $\theta\mid \mu,X$ if possible) and $\mu \mid \theta,X$. It turns out the convergence of such a sampler depends critically on the parametrization of $\mu$. One may look to strategies for determining an appropriate parametrization \cite{Papaspiliopoulos}. 
+
+
+Instead of settling on a single model for their sampler, Yu \& Meng \cite{Yu} study situations with two competing data augmentations: one in which an auxiliary variable $\mu$ is sufficient for $\theta$ (that is, $X\perp\theta\mid \mu$) and one in which an auxiliary variable $\nu$ is ancillary for $\theta$ (that is $\theta\perp \nu$). If Gibbs sampling is feasible in one model, it will likely also be feasible in the other, but often one of the two models is much slower to converge. There is always the option of sampling from both models alternatingly, by taking two steps of the sampler to be
+\begin{align}
+\mu\sim p(\mu \mid \theta^t,X) \to \theta^{t+1}\sim p(\theta \mid \mu,X) \to \nu\sim p(\nu\mid \theta^{t+1},X) \to \theta^{t+2}\sim p(\theta\mid \nu, X).
+\end{align}
+(we consider this two steps since it is twice the work and since we get two draws of $\theta$). It is not hard to show that if the sufficient sampler converges linearly with rate $\gamma_{\text{suff}}$ to the true posterior and the ancillary sampler with rate $\gamma_{\text{anc}}$, then the alternating sampler above converges with rate at most $\sqrt{\gamma_{\text{suff}}\gamma_{\text{anc}}}$ to the true posterior. Since $\sqrt{\gamma_{\text{suff}}\gamma_{\text{anc}}} \le \gamma_{\text{suff}}\lor\gamma_{\text{anc}}$, the alternating sampler is never worse than the worse of the two individual samplers. In terms of optimization, we make a simple, related observation: 
+
+{\bf Proposition 2.} Suppose operators $S,T:\mathbb R^d\to\mathbb R^d$ are $\gamma_S$ and $\gamma_T$ contractions, respectively. Then $S\circ T$ is a $\gamma_S\gamma_T$% Define $x^{2k+1} = S(x^{2k})$ and $x^{2k+2} = T(x^{2k+1})$ for $k\ge 0$. Then the iterates $\{x^k\}$ converge linearly with rate at most $\sqrt{\gamma_S\gamma_T}$. 
+
+Obviously if $T$ and $S$ have the same unique fixed point $x^*$, then the alternating iterates also converge to $x^*$. If we have CAVI updates for two augmented models $(\mu,\theta)$ and $(\nu,\theta)$, we can alternate between updating 
+\begin{align*}
+q(\mu) = &\argmax_{\widetilde q(\mu)} \mathcal L_\text{suff}(\widetilde q(\mu) q^t(\theta)) 
+\to q^{t+1}(\theta) = \argmax_{\widetilde q(\theta)} \mathcal L_\text{suff}(q(\mu) \widetilde q(\theta)) \\
+&\to q(\nu) = \argmax_{\widetilde q(\nu)} \mathcal L_\text{anc}(\widetilde q(\nu) q^{t+1}(\theta)) 
+\to q^{t+2}(\theta) = \argmax_{\widetilde q(\theta)} \mathcal L_\text{anc}(q(\nu) \widetilde q(\theta)) 
+\end{align*}
+by analogy with the alternating sampler above. In situations where proposition 2 applies, the iterates $q^t(\theta)$ of alternating CAVI will converge. Unfortunately, we cannot guarantee in general how the quality of the iterates of alternating CAVI compares to that of the individual CAVI updates. Since this is not guaranteed to converge faster than both models (only faster than the slower of the two), alternating CAVI leaves plenty to be desired. \\
+
+Yu \& Meng \cite{Yu} demonstrate theoretically and empirically that ``coupling is better than compromising." That is, with a slight tweak of the alternating sampler, we can achieve geometric convergence even in situations where neither individual sampler converges geometrically. Unfortunately, there is no direct analogue of the interweaving sampler they introduce for variational Bayes, so we consider their most basic possible example using variational Bayes as a testing ground for generalizations.
+
+\subsection{Example: Normal-Location Model} 
 
 \newpage
 
 \section{Parameter Expanded Variational Bayes}
 \label{PXVB}
 
-We describe here the Parameter Expanded Variational Bayes (PX-VB) algorithm proposed in \cite{Qi2006}. Suppose we have a data model $p(X,\theta)$, where $\theta =  \{\theta_1, ... , \theta_K\}$ are parameters, and $X$ represents the observed data. In PX-VB, the data model is augmented with an auxiliary parameter $\alpha$. Denote this overparametrized model by $p_\alpha(\theta, X)$; and let $\alpha_0$ be the choice of $\alpha$ where the original model is recovered. PX-VB adds two additional steps to the standard CAVI algorithm. At every iteration, we run one step of CAVI, which outputs an approximate variational distribution. PX-VB then chooses an $\alpha$ with which we will expand the data model. The original objective is then recovered through reparametrization of the variational distribution. In other words, any changes incurred by adjusting the data model from $\alpha_0$ to $\alpha$ is absorbed into the variational distribution $q(\theta)$. 
+We describe here the Parameter Expanded Variational Bayes (PX-VB) algorithm proposed in \cite{Qi}. Suppose we have a data model $p(X,\theta)$, where $\theta =  \{\theta_1, ... , \theta_K\}$ are parameters, and $X$ represents the observed data. In PX-VB, the data model is augmented with an auxiliary parameter $\alpha$. Denote this overparametrized model by $p_\alpha(\theta, X)$; and let $\alpha_0$ be the choice of $\alpha$ where the original model is recovered. PX-VB adds two additional steps to the standard CAVI algorithm. At every iteration, we run one step of CAVI, which outputs an approximate variational distribution. PX-VB then chooses an $\alpha$ with which we will expand the data model. The original objective is then recovered through reparametrization of the variational distribution. In other words, any changes incurred by adjusting the data model from $\alpha_0$ to $\alpha$ is absorbed into the variational distribution $q(\theta)$. 
 
 
 
@@ -137,14 +159,14 @@ The added steps of PX-VB increase the computational cost compared to CAVI, but w
 
 Following the example in \cite{Qi}, we explore the performance of PX-VB in the setting of Bayesian probit regression. Let $\{t_n\}_{n=1}^N$ be $\{-1,+1\}$--valued random variables. The design matrix $X\in\mathbb R^{N\times D}$ is fixed, and we place a normal prior on the parameter vector $w\in\mathbb R^D$. The generative model is
 \begin{align}
-w &\sim \mathcal N (0, v_0^2) \\
-t_n &\sim \text{Bern}(\Phi(w^\mathsf T x_n))\quad \text{n = 1, ..., N} \label{eq:gen_probit_1}
+w &\sim \mathcal N (0, v_0^2I_{D\times D}) \\
+t_n &\sim \text{Bern}(\Phi(w^\mathsf T x_n))\quad n = 1, ..., N \label{eq:gen_probit_1}
 \end{align}
 where $\Phi$ is the standard normal c.d.f. Equivalently, we can re-write this generative model with latent variables $z_n$ as follows: 
 \begin{align}
-    w &\sim \mathcal N (0, v_0^2) \\
-    z_n &\sim \mathcal N (w^\mathsf T x_n, 1)\quad \text{n = 1, ..., N} \label{eq:gen_probit_zn}\\
-    t_n &= \text{sign}(z_n) \quad \text{n = 1, ..., N} \label{eq:gen_probit_2}
+    w &\sim \mathcal N (0, v_0^2I_{D\times D}) \\
+    z_n &\sim \mathcal N (w^\mathsf T x_n, 1)\quad n = 1, ..., N \label{eq:gen_probit_zn}\\
+    t_n &= \text{sign}(z_n) \quad n = 1, ..., N \label{eq:gen_probit_2}
 \end{align}
 A brief computation verifies this equivalence: 
 \begin{align}
@@ -154,12 +176,12 @@ P(t_n = +1) &= P(z_n \geq 0) \quad \text{(by eqn. \ref{eq:gen_probit_2} )}\\
 which shows that $t_n$ is Bernoulli with parameter $\Phi(w^\mathsf Tx_n)$. 
 
 \subsection{Parameter updates}
-We will work with the second formulation with the latent $z_n$. We take a fully factorized distribution over $\{z_n\}_{n=1}^N$ and $w$. In particular, 
+We will work with the second formulation where we introduced the latent $z_n$. To perform mean field variational inference, we take a fully factorized distribution over $\{z_n\}_{n=1}^N$ and $w$. In particular, 
 \begin{align}
     q_w(w) &\sim \mathcal N (\hat w, \hat\Sigma_w)\\
-    q_{z_n}(z_n) &\sim \mathcal{N}(\hat z_n, 1)\mathbb I\{\text{sign}(z_n) = t_n\}
+    q_{z_n}(z_n) &\sim \mathcal{N}(\hat z_n, 1)\mathbb I\{\text{sign}(z_n) = t_n\} \quad n = 1, ..., N
 \end{align}
-That is, $q_{z_n}$ follows a truncated normal distribution; $z_n$ is restricted to $[0,\infty)$ or $(-\infty,  0]$ when $t_n=1$ or $t_n=-1$, respectively. Our goal is to find parameters $\{z_n\}_{n=1}^\infty$, $\hat w$, and $\hat\Sigma_w$ to minimize the KL divergence $D\big(q(w) \prod_{n=1}^N q(z_n)\|p(w, z| t)\big)$, where $p(w,z|t)$ is the true posterior distribution. 
+That is, $q_{z_n}$ follows a truncated normal distribution; $z_n$ is restricted to $[0,\infty)$ or $(-\infty,  0]$ when $t_n=1$ or $t_n=-1$, respectively. Our goal is to find parameters $\{\hat z_n\}_{n=1}^\infty$, $\hat w$, and $\hat\Sigma_w$ to minimize the KL divergence $D\big(q(w) \prod_{n=1}^N q(z_n)\|p(w, z| t)\big)$, where $p(w,z|t)$ is the true posterior distribution. 
 
 Writing out this objective explicitly (see \ref{probit_append}) we find that the coordinate ascent updates for the variational parameters are given by 
 \begin{align}
@@ -168,18 +190,18 @@ Writing out this objective explicitly (see \ref{probit_append}) we find that the
     \hat w &= (X^T X + v_0^{-2} I_{D\times d})^{-1} XE_q[z]
 \end{align}
 
-Now we seek to use PX-VB to accelerate the convergence of CAVI. We augment our model as follows with an auxiliary parameter $\alpha$ as follows: 
+We seek to use PX-VB to accelerate the convergence of CAVI. Following \cite{Qi}, we augment our model with an auxiliary parameter $\alpha$ as follows: 
 \begin{align}
-    w &\sim \mathcal N (0, \alpha v_0^2) \\
-    z_n &\sim \mathcal N (w^\mathsf T x_n, \alpha)\quad \text{n = 1, ..., N} \label{eq:gen_probit_zn}\\
-    t_n &= \text{sign}(z_n) \quad \text{n = 1, ..., N} \label{eq:gen_probit_2}
+    w &\sim \mathcal N (0, \alpha v_0^2I_{D\times D}) \\
+    z_n &\sim \mathcal N (w^\mathsf T x_n, \alpha)\quad n = 1, ..., N \\
+    t_n &= \text{sign}(z_n) \quad n = 1, ..., N
 \end{align}
 In other words, we expanded the original model $p(w,z,t|X)$ to $p_\alpha(w,z,t|X)$ with the relation
 \begin{align}
    p_\alpha(w,z,t|X) = p(\alpha w, \alpha z, t|X)
 \end{align}
 
-In step (ii) of PX-VB, we minimize $D\big(q(w) \prod_{n=1}^N q^{(t)}(z_n) \| p_\alpha(w,z,t|X) \big)$ with respect to $\alpha$ and find that (see \ref{probit_append}
+In step (ii) of PX-VB, we minimize $D\big(q(w) \prod_{n=1}^N q^{(t)}(z_n) \| p_\alpha(w,z,t|X) \big)$ with respect to $\alpha$ and find the minimizer $\alpha^*$ to satisfy: 
 \begin{align}
     \alpha^{*2} = \frac{1}{N+M} \Big(\sum_{n=1}^N E_q[z_n^2] - 2E_q[z_n] \hat w^\mathsf Tx_n + x_n^\mathsf T E_q[w w^\mathsf T] w_n\Big) + \frac{1}{v_0^2(N+M)} E_q[w w^\mathsf T]
 \end{align}
@@ -191,37 +213,69 @@ And in step (iii) the original model is recovered by taking
 Note that the added steps in PX-VB are relatively computationally inexpensive, and in the following sections, we explore the gains in the rate of convergence. 
 
 \subsection{Simulated Data}
-We compare the convergence of three algorithms: CAVI, PX-VB, and Newton conjugate gradient trust region. First, we applied these algorithms on simulated data: we took the number of data points $N = 500$, the dimension of the parameter $w$ was 20. The results are displayed in figure~\ref{fig:Probit_synth}. 
+We compare the convergence of three algorithms: CAVI, PX-VB, and Newton conjugate gradient trust region. First, we applied these algorithms on simulated data: we took the number of data points to be $N = 500$ and the dimension of the parameter $w$ to be $D= 20$. The results are displayed in figure~\ref{fig:Probit_synth}. 
+
+We see that in comparing CAVI and PX-VB, PX-VB converged in shorter time. The difference in consecutive CAVI iterates reached $10^{-12}$ in about 30 seconds, while PX-VB reached this threshold in about 1/6th the time (figure~\ref{fig:Probit_synth}a). In the ELBO plot (figure~\ref{fig:Probit_synth}b), PX-VB also became close to the optima in two iterations and beat CAVI in wall time. 
+
+The Newton method was the slowest of the three algorithm. In our simulation, an iteration takes $\sim10^2$ more time to compute than a step of CAVI or PXVB. This is due to the high dimensional parameter space, since we have a variational parameter for each of the $N$ data points. 
 
 
-
-\begin{figure}[h]
-        \begin{subfigure}[t]{0.49\textwidth}
-        \includegraphics[width=\textwidth]{Probit_real/CAVI_PX_convergence.png}
+\begin{figure}[tb]
+    \begin{subfigure}[t]{0.49\textwidth}
+        \includegraphics[width=\textwidth]{Probit_synth/CAVI_PX_convergence.png}
+        \subcaption{}
     \end{subfigure}
           \begin{subfigure}[t]{0.49\textwidth}
-        \includegraphics[width=\textwidth]{Probit_real/elbo_time.png}
+        \includegraphics[width=\textwidth]{Probit_synth/elbo_timeII.png}
+        \subcaption{}
     \end{subfigure}
-    \caption{Convergence results for variational inference on SPAM dataset [2], consisting of $N= 4601$ emails, each with $D=57$ keyword predictors (see examples in table). The response variables $t_n$ indicate whether the email was spam.} %The consecutive differences in the second order method did not exhibit as much regularity, so they are omitted on the first plot.}
-    \label{fig: Probit_synth}
+    \caption{Convergence results on synthetic data, where $N = 500$ and $D = 20$. (a) The changes in consecutive iterates over time.  (b) The value of our objective function, the evidence lower bound, over time. Inset shows the same plot, zoomed onto the top left quadrant.}
+    \label{fig:Probit_synth}
 \end{figure}
 
 
 
 \subsection{SPAM Data}
+We also compared the convergence of the three algorithms applied to a probit regression problem on email SPAM data~\cite{Efron}. Here, the observed variables $t_n$ are +1 and -1, indicating whether an email was spam or not spam, respectively. $N=4601$ emails were examined, and each feature vector $x_n$ describes the prevalence of a word or character (such as "money", "free", "!"). In total, there were $57$ features and an added intercept, so $D = 58$. 
+
+Figure~\ref{fig:Probit_spam} shows the rate of convergence of the three algorithms.  Again, Newton is slow compared to CAVI and PX-VB. And PX-VB is exhibits the fastest among all three. 
 
 
-
-\begin{figure}[h]
+\begin{figure}[tb]
         \begin{subfigure}[t]{0.49\textwidth}
         \includegraphics[width=\textwidth]{Probit_real/CAVI_PX_convergence.png}
     \end{subfigure}
           \begin{subfigure}[t]{0.49\textwidth}
         \includegraphics[width=\textwidth]{Probit_real/elbo_time.png}
     \end{subfigure}
-    \caption{Convergence results for variational inference on SPAM dataset [2], consisting of $N= 4601$ emails, each with $D=57$ keyword predictors (see examples in table). The response variables $t_n$ indicate whether the email was spam.} %The consecutive differences in the second order method did not exhibit as much regularity, so they are omitted on the first plot.}
-    \label{fig: Probit_spam}
+    \caption{Convergence results for variational inference on SPAM dataset [2], consisting of $N= 4601$ emails, each with $D=57$ keyword predictors (see examples in table). (a) The differences between consecutive iterates over time. (b) The evidence lower bound over time. } %The consecutive differences in the second order method did not exhibit as much regularity, so they are omitted on the first plot.}
+    \label{fig:Probit_spam}
 \end{figure}
+
+All three algorithms converged to the same $\hat w$, our variational estimate for the posterior mean for the parameter vector $w$.  Table~\ref{table:Spam_table} shows our estimate for a few selected keywords. Notably, the words "lab", "cs", "meeting", and "george" (the name of the emails' recipient) are strong indicators for an email being not spam, matching our intuition that an email containing work related terms, or knowing the recipient's name, is an indication of not spam. Conversely, emails containingg the \$ or \# are indicative of spam. 
+
+
+\begin{table}[tb]
+%\vspace{2ex}
+\begin{tabular}{c | c | c | c | c | c | c | c}
+\toprule
+\toprule
+\textbf{Keyword} & \texttt{intercept} & \texttt{make} & \texttt{3d} & \texttt{addresses} & \texttt{free} & \texttt{business} & \texttt{george} \\
+\midrule
+Estimate $\widehat w$ & -0.81 & -0.19 & 1.74 & 0.83 & 0.51 & 0.46 & -4.46\\
+\midrule
+\textbf{Keyword} & \texttt{lab} & \texttt{technology} & \texttt{cs} & \texttt{meeting} & \texttt{!} & \texttt{\$} & \texttt{\#} \\
+\midrule
+Estimate $\widehat w$ & -7.66 & 0.46 & -1.78 & -1.85 & 0.16 & 2.30 & 1.35\\
+\bottomrule
+\bottomrule
+\end{tabular}
+\vspace{0.5em}
+
+\caption{Probit regression analysis of the SPAM dataset. Estimated regression coefficients from CAVI for $14$ example keyword predictors (total number of keywords was 57). Note that the recipient of the emails is named \texttt{george}.}
+\label{table:Spam_table}
+\end{table}
+
 
 \section{Example: Linear Mixed Models} 
 As in the Probit model, let $X\in \mathbb{R}^{N\times D}$ be a fixed design matrix, with rows $x_n, n = 1,..., N$. We also assume the variances $\sigma^2_\beta, \sigma^2_\mu$, and $\sigma^2_y$ are fixed and known. Let the number of groups be $N_G$, and let the mapping $g(n)\mapsto \{1, ..., N_G\}$ denote the group to which the $n$-th individual belongs. Then the linear mixed model is formulated is follows: 
@@ -304,10 +358,14 @@ We would like to thank Professor Wainwright and Fanny for their dedication to te
 
 \bibitem{Luo} Luo, Z. Q. \& Tseng, P. (1992). On the Convergence of the Coordinate Descent Method for Convex Differentiable Minimization. {\itshape Journal of Optimization Theory and Applications} 72(1): 7-35. 
 
+\bibitem{Papaspiliopoulos} Papaspiliopoulos, O., Roberts, G. O., and Skold, M. (2003), Non-Centered Parameterisations for Hierarchical Models and Data Augmentation. {\sl Bayesian Statistics} 307-326
+
 \bibitem{Qi} Qi, Y. \& Jaakkola, T. S. (2006). Parameter Expanded Variational Bayesian Methods. {\itshape Neural Information Processing Systems}. 
 
-\bibitem{Sahu} Sahu, S. K., and Roberts, G. O. (1998), On Convergence of the EM Algorithm and the Gibbs Sampler. {\sl Statistics
+\bibitem{Sahu} Sahu, S. K., \& Roberts, G. O. (1998). On Convergence of the EM Algorithm and the Gibbs Sampler. {\sl Statistics
 and Computing}. 
+
+\bibitem{van} van Dyk, D. A., \& Meng, X. L. (2001). The art of data augmentation (with discussion). {\sl Journal of Computational and Graphical Statistics}.
 
 \bibitem{Yu} Yu, Y. \& Meng, X. (2012). To Center or Not to Center: That Is Not the
 Question-- An Ancillarity-Sufficiency Interweaving Strategy (ASIS) for Boosting MCMC Efficiency. {\itshape Journal of Computational and Graphical Statistics}. 20(3): 531-570. 
