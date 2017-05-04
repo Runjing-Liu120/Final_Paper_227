@@ -31,7 +31,8 @@
 \usepackage{subcaption}
 \renewcommand{\qedsymbol}{$\spadesuit$}
 
-\title{Data Augmentation to Accelerate Convergence of Variational Bayes}
+%\title{Properties of Accelerated Variational Bayes}
+\title{Comparing the Convergence of Optimization Methods for Variational Bayes}
 
 % The \author macro works with any number of authors. There are two
 % commands used to separate the names and addresses of multiple
@@ -44,7 +45,7 @@
 % author name.
 
 \author{
-  Runjing Liu and Jake Soloff \\
+  Runjing (Bryan) Liu and Jake Soloff \\
   Department of Statistics, UC Berkeley\\
   \texttt{\{runjing\_liu,jake\_soloff\}@berkeley.edu}
   %% examples of more authors
@@ -69,7 +70,7 @@
 \vspace{-1em}
 
 \begin{abstract}
-one line\\two lines\\3 linez\\ 4 linsu
+We explore strategies for accelerating the convergence of coordinate ascent variational Bayes. We primarily study Parameter Expanded Variational Bayes (PX-VB), proposed in \cite{Qi}, applied to three models. We discuss its connections to sampling methods, as well as its properties as an optimization algorithm. %We find PX-VB has the potential for major speedup, but 
 \end{abstract}
 
 \section{Motivation}
@@ -399,14 +400,14 @@ The optimal $\alpha$ in step (ii) of PXVB is given by
 \end{align}
 And the reparametrization step (iii) is done by 
 \begin{align}
-    q^{(t+1)}(\mu_g) = \tilde q^{(t)}(\mu_g\alpha^*) \quad \text{and} \quad q^{(t+1)}(\beta) = \tilde q^{(t)}(\beta)
+    q^{(t+1)}(\mu_g) = \tilde q^{(t)}(\mu_g-\alpha^*) \quad \text{and} \quad q^{(t+1)}(\beta) = \tilde q^{(t)}(\beta)
 \end{align}
 See Appendix~\ref{lmm_append} for the derivation of these updates. 
 
 
 
 \subsection{Convergence results on simulated data}
-We simulated data according the the generative model described in equations \ref{eq:lmm_prior1}-\ref{eq:lmm_LH}. We took $N_G = 10$ groups, and $N/N_G = 50$ observations per group. The dimension of the parameter vector $\beta$ was $D = 20$. The variances $\sigma^2_\beta$ and $\sigma^2_y$ were fixed at 100 and 1, respectively. However, under different settings of $\sigma^2_\mu$, the convergence of PX-VB behaves differently: when $\sigma^2_\mu$ is large, PX-VB exhibits the same behavior as CAVI; but when $\sigma^2_\mu$ is small, PX-VB converges more slowly than CAVI. 
+We simulated data according the the generative model described in equations \ref{eq:lmm_prior1}-\ref{eq:lmm_LH}. We took $N_G = 10$ groups, and $N/N_G = 50$ observations per group. The dimension of the parameter vector $\beta$ was $D = 20$. The variances $\sigma^2_\beta$ and $\sigma^2_y$ were fixed at 100 and 1, respectively. However, under different settings of $\sigma^2_\mu$, the convergence of PX-VB behaves differently: when $\sigma^2_\mu$ is large, PX-VB exhibits the same behavior as CAVI; but when $\sigma^2_\mu$ is small, PX-VB converges more slowly than CAVI (figure~\ref{fig:lmm}). 
 
 The explanation for the former is straightforward. If we examine the CAVI update for $\hat\mu_g$ (eqn.~\ref{eq:lmm_mu_upd}), then when $\sigma^2_\mu$ is large, it reduces to 
 \begin{align}
@@ -415,14 +416,14 @@ The explanation for the former is straightforward. If we examine the CAVI update
 Now recalling $\alpha^*$ from equation~\ref{eq:lmm_alpha}, we show that this will be close to zero: 
 \begin{align}
 \alpha &= \frac{1}{N} \sum_{n=1}^N (y_n - x_n^T \hat\beta - \hat\mu_{g(n)})\\
-    &= \frac{1}{N} \sum_{g=1}^{N_g} \Big(\sum_{n: g(n)) = g} (y_n - x_n^T \hat\beta)- \frac{N}{N_G}\hat\mu_{g(n)})\Big) \\
-    &\approx \frac{1}{N} \sum_{g=1}^{N_g} \Big(\frac{N}{N_g}\hat\mu_g - \frac{N}{N_G}\hat\mu_{g(n)})\Big) \quad \text{(by eqn.~\ref{eq:approx_mu})}\\
+    &= \frac{1}{N} \sum_{g=1}^{N_g} \Big(\sum_{n: g(n)) = g} (y_n - x_n^T \hat\beta)- \frac{N}{N_G}\hat\mu_{g(n)}\Big) \\
+    &\approx \frac{1}{N} \sum_{g=1}^{N_g} \Big(\frac{N}{N_g}\hat\mu_g - \frac{N}{N_G}\hat\mu_{g}\Big) \quad \text{(by eqn.~\ref{eq:approx_mu})}\\
     &= 0
 \end{align}
 
 Therefore, PX-VB behaves similarly to CAVI when $\sigma_\mu^2$ is large since $\alpha \approx 0$, and our reparametrization step is not doing much. 
 
-When $\sigma_\mu^2$ is small however, our reparametrization appears to hinder the convergence of CAVI. Taking an optimization viewpoint, it is possible that searching in the coordinate direction already corresponds to good directions---observe CAVI's near linear rate of convergence in figure~\ref{fig:lmm}a, and what appears to be one step convergence of the elbo in figure~\ref{fig:lmm}b---and therefore, any reparametrization forces the trajectory away from these good directions. 
+When $\sigma_\mu^2$ is small, however, our reparametrization appears to hinder the convergence of CAVI. Taking an optimization viewpoint, it is possible that searching in the coordinate direction already corresponds to good directions---observe CAVI's near linear rate of convergence in figure~\ref{fig:lmm}a, and the rapid ascent of the ELBO in figure~\ref{fig:lmm}b---and therefore, any reparametrization forces the trajectory away from these good directions. 
 
 
 
@@ -443,49 +444,38 @@ When $\sigma_\mu^2$ is small however, our reparametrization appears to hinder th
         \includegraphics[width=\textwidth]{LMM/elbo_lmm_smallvar.png}
             \subcaption{}
     \end{subfigure}
-    \caption{Comparing the convergence of PXVB and CAVI in two regimes. For all plots, there were $N_G = 10$ groups, and $n = 50$ observations per group. The dimension of the parameter vector $\beta$ was $D = 20$. In the {\itshape top row}, the prior variance for $\mu_g$ was $10^{-4}$, while in the {\itshape bottom row}, the prior variance was 100. } %The consecutive differences in the second order method did not exhibit as much regularity, so they are omitted on the first plot.}
+    \caption{Comparing the convergence of PXVB and CAVI in data generated from the linear mixed model. For all plots, there were $N_G = 10$ groups, and $n = 50$ observations per group. The dimension of the parameter vector $\beta$ was $D = 20$. In the {\itshape top row}, the prior variance for $\mu_g$ was $10^{2}$, while in the {\itshape bottom row}, the prior variance was $10^{-4}$. } %The consecutive differences in the second order method did not exhibit as much regularity, so they are omitted on the first plot.}
     \label{fig:lmm}
 \end{figure}
 
-
-
-
 \section{Discussion and future directions}
-We found that in our Bayesian probit regression problem, PX-VB speeds up the convergence of variational methods compared to coordinate ascent and Newton conjugate gradient, two standard algorithms in optimization. The advantage to a Newton method is that there exist "black box" implementations of such algorithms in most standard optimization packages. The only requirement is that one must be able to write down the objective function (in our case the evidence lower bound) in vectorized code and derivatives are approximated with automatic differentiation. However, in variational methods, the optimization is often conducted over a high dimensional parameter space. For example, in probit regression, there is one variational parameter for each data point. This results in high computational complexity at each iteration. This phenomenon is well exhibited in our results, where Newton suffers in terms of wall time, even though the number of iterations required for convergence is smaller than CAVI or PX-VB. 
+We found that in our Bayesian probit regression problem, PX-VB speeds up the convergence of variational Bayes compared to coordinate ascent and Newton conjugate gradient, two standard algorithms in optimization. The Newton method has the advantage of not requiring model specific derivations beyond writing down the ELBO, and there are many "black box" implementations of such algorithms in standard optimization packages. One must be able to write down the ELBO in vectorized code and derivatives are approximated with automatic differentiation. However, in variational Bayes, the optimization is often conducted over a high dimensional parameter space. For example, in probit regression, there is one variational parameter for each data point. This results in high computational complexity at each iteration. This phenomenon is well exhibited in our results, where Newton suffers in terms of wall time, even though the number of iterations required for convergence is smaller than CAVI or PX-VB.%, since second-order methods enjoy quadratic convergence to local optima. 
 
-Thus, this result suggest that there are real gains in convergence time to deriving updates for coordinate descent. While CAVI requires more iterations to converge than Newton, each iteration is very cheap to compute. 
+Thus, this result suggests that there are real gains in convergence to be had from deriving updates for coordinate ascent. While CAVI requires more iterations to converge than Newton, each iteration is very cheap to compute. 
 
 PX-VB introduces an intermediate step to coordinate ascent, but the computational cost of this additional step is often small---and with a good augmentation, this additional computational cost is made worthwhile by the gains in per-iteration rate of convergence as demonstrated in the Probit model.
 
-To see this more abstractly, we can view the intermediate step in PX-VB as defining a mapping $M$ that takes $(q, p_0) \stackrel{\text{(ii)}}{\mapsto} (q, p_\alpha) \stackrel{\text{(iii)}}{\mapsto} (q_\alpha, p_0)$. Moreover, let $S$ be the mapping defined by the CAVI updates, and assume that the truth $q^*$ is a fixed point of both the mappping $S$ and $M$. Then the error of each iteration of PX-VB can be seen as
-\begin{align}
-\|q^{(t+1)} - q^*\|_2 &\leq \| M(S(q^{(t)})) - q^*\|_2 \\
-&\leq \|MS\|_2 \|q^{(t)} - q^*\|_2\\
-&\leq \|M\|_2\|S\|_2 \|q^{(t)} - q^*\|_2
-\end{align}
+To see this another way, we can view the intermediate step in PX-VB as defining a mapping $M$ that takes $(q, p_0) \stackrel{\text{(ii)}}{\mapsto} (q, p_\alpha) \stackrel{\text{(iii)}}{\mapsto} (q_\alpha, p_0)$ as described in section \ref{PXVB}. Let $S$ be the mapping defined by the CAVI updates, and assume that the minimizer $q^*$ of KL is a fixed point of both the mapping $S$ and $M$. By proposition 2, if $M$ and $S$ are contraction mappings, then CAVI converges linearly at rate $\gamma_S$, whereas PX-VB converges at rate $\gamma_M\gamma_S$. %Whenever the largest eigenvalue of $M$ is less than $1$, PX-VB will converge faster than CAVI. 
 
-Thus, we see that while CAVI converges linearly at rate $\|S\|_2$, PX-VB converges at rate $\|M\|_2\|S\|_2$. Whenever the largest eigenvalue of $M$ is less than $1$, PX-VB will converge faster than CAVI. 
+Our choice of reparametrization in the linear mixed model did not make the PX-VB updates $M$ a contraction mapping. One challenge to PX-VB is anticipating which data-augmentation scheme will actually accelerate convergence.
 
-It is possible that our choice of reparametrization in the linear mixed model did not fall into this regime. Therefore, one challenge to PX-VB is anticipating which data-augmentation scheme will actually accelerate convergence. 
-
-{\color{red} 
-
-It is well known that the mean field approximation performs well when the posterior distribution has low correlation. Therefore, we would like to understand the connection between the reparametrization mapping $M$ and the posterior correlation structure. ~\\~\\
+Therefore, in future work, we would like to understand the connection between the reparametrization mapping $M$ and the posterior correlation structure, since the mean field approximation performs well when the posterior distribution has low correlation. 
 
 Ultimately, in the normal hierarchical model, data augmentation methods correspond to choosing good directions for coordinate ascent. We would like to look at more examples where PX-VB succeeds and understand whether, more generally, these directions make use of second-order structure.
-}
+
 
 \newpage
 
 \section*{Acknowledgments}
-We would like to thank Professor Wainwright and Fanny for their dedication to teaching an excellent course! We also thank Ryan Giordano in the Department of Statistics, for introducing us to the ASIS paper \cite{Yu} and for his helpful discussions.
+We would like to thank Professor Wainwright and Fanny Yang for their dedication to teaching an excellent course! We also thank Ryan Giordano in the Department of Statistics, for introducing us to the ASIS paper \cite{Yu} and for his helpful discussions.
 
 % also thank ryan %Also thanks to the stat department lounge for housing us since we got here.
 
 \section*{Attribution}
 \begin{itemize}
-\item Runjing Liu: 
-\item Jake Soloff: 
+\item Runjing Liu: Sections 2-5, Appendix C
+\item Jake Soloff: Section 1, Appendix A,B,D and literature search
+\item Jointly: poster, code and debugging!
 \end{itemize}
 
 \begin{thebibliography}{10}
